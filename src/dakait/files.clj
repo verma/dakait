@@ -27,3 +27,10 @@
          (filter not-hidden?)
          (map (fn [e] { :name (.getFilename e) :type (file-type e)})))))
 
+(defn mk-path [p]
+  (let
+    [base-path (io/file "/Users/verma")]
+    (cond
+      (nil? p) (.getPath base-path)
+      :else (.getPath (io/file base-path (io/file p))))))
+

@@ -14,8 +14,11 @@
 
 (defroutes app-routes
   (GET "/" [] (index-page))
-  (GET "/a/lfiles" [] (as-json (all-files "/Users/verma")))
+  (GET "/a/lfiles" {params :params}
+    (let [dst-path (mk-path (:path params))]
+       (as-json (all-files dst-path))))
   (GET "/a/files" [] (as-json (all-remote-files "./")))
+  (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
 
