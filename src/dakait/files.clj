@@ -5,10 +5,13 @@
     [clj-ssh.ssh :as ssh]))
 
 (defn all-files [path]
-  (let [file-type (fn [e] (if (.isDirectory e) "dir" "file"))]
+  (let [file-type (fn [e] (if (.isDirectory e) "dir" "file"))
+        file-size (fn [e] (.length e))]
     (seq (->> (.listFiles (clojure.java.io/file path))
            (filter #(not (.isHidden %1)))
-           (map (fn [e] { :name (.getName e) :type (file-type e)}))))))
+           (map (fn [e] { :name (.getName e)
+                          :type (file-type e)
+                          :size (file-size e)}))))))
 
 
 (defn list-remote-files [path]
@@ -22,10 +25,14 @@
 (defn all-remote-files [path]
   (let [entries (list-remote-files path)
         not-hidden? (fn [e] (not= (.charAt (.getFilename e) 0) \.))
-        file-type (fn [e] (if (.isDir (.getAttrs e)) "dir" "file"))]
+        file-type (fn [e] (if (.isDir (.getAttrs e)) "dir" "file"))
+        file-size (fn [e] (.getSize (.getAttrs e)))
+        ]
     (->> entries 
          (filter not-hidden?)
-         (map (fn [e] { :name (.getFilename e) :type (file-type e)})))))
+         (map (fn [e] { :name (.getFilename e) 
+                        :type (file-type e)
+                        :size (file-size e)})))))
 
 (defn mk-path [p]
   (let
