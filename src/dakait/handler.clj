@@ -23,15 +23,21 @@
   (route/resources "/")
   (route/not-found "Not Found"))
 
-(defn announce-config []
-  (println "Dakiat server.")
-  (println "Using configuration:")
-  (println "... sftp server:" (config :sftp-host))
-  (println "... private key:" (config :private-key))
-  (println "...  public key:" (config :public-key)))
+(defn check-config []
+  (let [host (config :sftp-host)
+        pk (config :private-key)
+        pb (config :public-key)]
+    (println "Dakiat server.")
+    (when (some nil? [host pk pb])
+      (println "Configuration invalid, need host, private key and public key, did you setup resources/config.clj?")
+      (System/exit 1))
+    (println "Using configuration:")
+    (println "... sftp server:" host)
+    (println "... private key:" pk)
+    (println "...  public key:" pb)))
 
 
-(announce-config)
+(check-config)
 
 (def app
   (-> (handler/site app-routes)
