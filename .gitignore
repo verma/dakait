@@ -10,3 +10,4 @@ pom.xml.asc
 /.nrepl-port
 /resources/public/js/main.js
 .DS_Store
+/resources/config.clj

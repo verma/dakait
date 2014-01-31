@@ -2,6 +2,7 @@
   (:use compojure.core
         dakait.views
         dakait.files
+        [carica.core :only [config]]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
             [clojure.data.json :as json]
@@ -17,10 +18,20 @@
   (GET "/a/lfiles" {params :params}
     (let [dst-path (mk-path (:path params))]
        (as-json (all-files dst-path))))
-  (GET "/a/files" [] (as-json (all-remote-files "./")))
+  (GET "/a/files" [] (as-json (all-remote-files ".")))
   (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
+
+(defn announce-config []
+  (println "Dakiat server.")
+  (println "Using configuration:")
+  (println "... sftp server:" (config :sftp-host))
+  (println "... private key:" (config :private-key))
+  (println "...  public key:" (config :public-key)))
+
+
+(announce-config)
 
 (def app
   (-> (handler/site app-routes)

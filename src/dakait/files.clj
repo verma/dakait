@@ -1,8 +1,19 @@
 (ns dakait.files
-  (:use compojure.core)
+  (:use compojure.core
+        [carica.core :only [config]])
   (:require 
     [clojure.java.io :as io]
     [clj-ssh.ssh :as ssh]))
+
+(def ^{:dynamic true} *ssh-agent* (ssh/ssh-agent {}))
+(defn- agent-with-identity []
+  (when (ssh/has-identity? *ssh-agent* "sftp-server")
+    *ssh-agent*)
+  (ssh/add-identity *ssh-agent* 
+                { :name "sftp-server"
+                  :public-key-path (config :public-key)
+                  :private-key-path (config :private-key) })
+  (identity *ssh-agent*))
 
 (defn all-files [path]
   (let [file-type (fn [e] (if (.isDirectory e) "dir" "file"))
@@ -13,14 +24,13 @@
                           :type (file-type e)
                           :size (file-size e)}))))))
 
-
 (defn list-remote-files [path]
-  (let [agent (ssh/ssh-agent {})]
-    (let [session (ssh/session agent "home" {:strict-host-key-checking :no})]
-      (ssh/with-connection session
-        (let [channel (ssh/ssh-sftp session)]
-          (ssh/with-channel-connection channel
-            (ssh/sftp channel {} :ls)))))))
+  (let [session (ssh/session (agent-with-identity) (config :sftp-host) {:strict-host-key-checking :no})]
+    (ssh/with-connection session
+      (let [channel (ssh/ssh-sftp session)]
+        (ssh/with-channel-connection channel
+          (when (not (nil? path)) (ssh/sftp channel {} :cd path))
+          (ssh/sftp channel {} :ls))))))
 
 (defn all-remote-files [path]
   (let [entries (list-remote-files path)

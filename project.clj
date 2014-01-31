@@ -6,6 +6,7 @@
                  [org.clojure/clojurescript "0.0-2138"]
                  [org.clojure/data.json "0.2.4"]
                  [de.ubercode.clostache/clostache "1.3.1"]
+                 [sonian/carica "1.0.4" :exclusions [[cheshire]]]
                  [jayq "2.5.0"]]
   :plugins [[lein-ring "0.8.10"]
             [lein-cljsbuild "1.0.1"]]
