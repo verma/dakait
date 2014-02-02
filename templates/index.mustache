@@ -17,6 +17,32 @@
 		.size {
 			text-align: right;
 		}
+		.listing {
+			font-size: 20px;
+		}
+		.file {
+			color: #666;
+		}
+		.dir {
+			color: #444;
+			font-weight: bold;
+		}
+		.dir:hover {
+			background-color: #00568B;
+			color: white;
+			cursor: pointer;
+		}
+		.name {
+			text-transform: uppercase;
+		}
+
+		.current-path {
+			color: #999;
+		}
+
+		.current-path a {
+			padding: 0px 5px;
+		}
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -32,8 +58,9 @@
   <body>
 
     <div class="container">
-		<h1>Files on server</h1>
-		<table class="table" id="file-list">
+		<h1 class="name">Home Server</h1>
+		<h3 class="current-path">./hello/world</h3>
+		<table class="table listing" id="file-list">
 			<thead>
 				<th></th>
 				<th>Name</th>

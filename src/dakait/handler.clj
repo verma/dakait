@@ -18,7 +18,8 @@
   (GET "/a/lfiles" {params :params}
     (let [dst-path (mk-path (:path params))]
        (as-json (all-files dst-path))))
-  (GET "/a/files" [] (as-json (all-remote-files ".")))
+  (GET "/a/files" {params :params }
+       (as-json (all-remote-files (:path params))))
   (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
