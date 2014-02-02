@@ -1,5 +1,6 @@
 (ns dakait.files
   (:use compojure.core
+        [clojure.tools.logging :only (info error)]
         [carica.core :only [config]])
   (:require 
     [clojure.java.io :as io]
@@ -14,6 +15,9 @@
                   :public-key-path (config :public-key)
                   :private-key-path (config :private-key) })
   (identity *ssh-agent*))
+  
+(defn join-path [& parts]
+  (.getPath (apply io/file parts)))
 
 (defn all-files [path]
   (let [file-type (fn [e] (if (.isDirectory e) "dir" "file"))
@@ -33,11 +37,13 @@
           (ssh/sftp channel {} :ls))))))
 
 (defn all-remote-files [path]
-  (let [entries (list-remote-files path)
+  (let [query-path (join-path (config :base-path) path)
+        entries (list-remote-files query-path)
         not-hidden? (fn [e] (not= (.charAt (.getFilename e) 0) \.))
         file-type (fn [e] (if (.isDir (.getAttrs e)) "dir" "file"))
         file-size (fn [e] (.getSize (.getAttrs e)))
         ]
+    (info "query path: " query-path)
     (->> entries 
          (filter not-hidden?)
          (map (fn [e] { :name (.getFilename e) 

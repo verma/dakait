@@ -26,14 +26,16 @@
 
 (defn check-config []
   (let [host (config :sftp-host)
+        base-path (config :base-path)
         pk (config :private-key)
         pb (config :public-key)]
     (println "Dakiat server.")
-    (when (some nil? [host pk pb])
+    (when (some nil? [host base-path pk pb])
       (println "Configuration invalid, need host, private key and public key, did you setup resources/config.clj?")
       (System/exit 1))
     (println "Using configuration:")
     (println "... sftp server:" host)
+    (println "...   base path:" base-path)
     (println "... private key:" pk)
     (println "...  public key:" pb)))
 
