@@ -6,15 +6,39 @@
     [clojure.java.io :as io]
     [clj-ssh.ssh :as ssh]))
 
-(def ^{:dynamic true} *ssh-agent* (ssh/ssh-agent {}))
+(def ssh-agent (atom nil))
+(def ssh-session (atom nil))
+(def ssh-channel (atom nil))
+
 (defn- agent-with-identity []
-  (when (ssh/has-identity? *ssh-agent* "sftp-server")
-    *ssh-agent*)
-  (ssh/add-identity *ssh-agent* 
-                { :name "sftp-server"
+  (when
+    (or (nil? @ssh-agent)
+        (not (ssh/ssh-agent? @ssh-agent)))
+    (let [agent (ssh/ssh-agent {})]
+      (ssh/add-identity agent { :name "sftp-server"
                   :public-key-path (config :public-key)
                   :private-key-path (config :private-key) })
-  (identity *ssh-agent*))
+      (info "new agent")
+      (reset! ssh-agent agent)))
+  @ssh-agent)
+
+(defn- session []
+  (when (nil? @ssh-session)
+    (let [session (ssh/session (agent-with-identity) (config :sftp-host) {:strict-host-key-checking :no})]
+      (reset! ssh-session session)))
+  (when-not (ssh/connected? @ssh-session)
+    (info "Reconnecting session...")
+    (ssh/connect @ssh-session))
+  @ssh-session)
+
+(defn- channel []
+  (when (nil? @ssh-channel)
+    (let [channel (ssh/ssh-sftp (session))]
+      (reset! ssh-channel channel)))
+  (when-not (ssh/connected-channel? @ssh-channel)
+    (info "Reconnecting channel")
+    (ssh/connect-channel @ssh-channel))
+  @ssh-channel)
   
 (defn join-path [& parts]
   (.getPath (apply io/file parts)))
@@ -29,12 +53,11 @@
                           :size (file-size e)}))))))
 
 (defn list-remote-files [path]
-  (let [session (ssh/session (agent-with-identity) (config :sftp-host) {:strict-host-key-checking :no})]
-    (ssh/with-connection session
-      (let [channel (ssh/ssh-sftp session)]
-        (ssh/with-channel-connection channel
-          (when (not (nil? path)) (ssh/sftp channel {} :cd path))
-          (ssh/sftp channel {} :ls))))))
+  ;;(let [this-channel (ssh/ssh-sftp (session))]
+    ;;(ssh/with-channel-connection this-channel
+  (let [this-channel (channel)]
+      (when (not (nil? path)) (ssh/sftp this-channel {} :cd path))
+      (ssh/sftp this-channel {} :ls)))
 
 (defn all-remote-files [path]
   (let [query-path (join-path (config :base-path) path)
