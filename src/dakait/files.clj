@@ -1,7 +1,7 @@
 (ns dakait.files
   (:use compojure.core
-        [clojure.tools.logging :only (info error)]
-        [carica.core :only [config]])
+        dakait.config
+        [clojure.tools.logging :only (info error)])
   (:require 
     [clojure.java.io :as io]
     [clj-ssh.ssh :as ssh]))
@@ -11,36 +11,47 @@
 (def ssh-channel (atom nil))
 
 (defn- agent-with-identity []
+  "Get an agent with properties setup correctly and the identity added from configuration"
   (when
     (or (nil? @ssh-agent)
         (not (ssh/ssh-agent? @ssh-agent)))
     (let [agent (ssh/ssh-agent {})]
-      (ssh/add-identity agent { :name "sftp-server"
-                  :public-key-path (config :public-key)
+      (ssh/add-identity agent { 
                   :private-key-path (config :private-key) })
       (info "new agent")
       (reset! ssh-agent agent)))
   @ssh-agent)
 
 (defn- session []
+  "Get the currently active session, if one doesn't exist, create a new one"
   (when (nil? @ssh-session)
-    (let [session (ssh/session (agent-with-identity) (config :sftp-host) {:strict-host-key-checking :no})]
+    (let [host (config :sftp-host)
+          user (config :username)
+          port (config :sftp-port)
+          agent (agent-with-identity)
+          session (ssh/session agent host {:port port
+                                           :username user
+                                           :strict-host-key-checking :no})]
       (reset! ssh-session session)))
-  (when-not (ssh/connected? @ssh-session)
-    (info "Reconnecting session...")
-    (ssh/connect @ssh-session))
   @ssh-session)
 
 (defn- channel []
-  (when (nil? @ssh-channel)
-    (let [channel (ssh/ssh-sftp (session))]
-      (reset! ssh-channel channel)))
+  "Get a connected channel, if the session is disconnected, connect it and then reconnect the channel
+  and return it"
+  (let [this-session (session)]
+    ;; reconnect session if not connected
+    (when-not (ssh/connected? this-session)
+      (ssh/connect this-session))
+    (when (nil? @ssh-channel)
+      (let [channel (ssh/ssh-sftp this-session)]
+        (reset! ssh-channel channel))))
   (when-not (ssh/connected-channel? @ssh-channel)
-    (info "Reconnecting channel")
+    (info "Reconnecting channel..")
     (ssh/connect-channel @ssh-channel))
   @ssh-channel)
   
 (defn join-path [& parts]
+  "Join the paths together"
   (.getPath (apply io/file parts)))
 
 (defn all-files [path]
@@ -53,8 +64,7 @@
                           :size (file-size e)}))))))
 
 (defn list-remote-files [path]
-  ;;(let [this-channel (ssh/ssh-sftp (session))]
-    ;;(ssh/with-channel-connection this-channel
+  "Get the list of all files at the given path"
   (let [this-channel (channel)]
       (when (not (nil? path)) (ssh/sftp this-channel {} :cd path))
       (ssh/sftp this-channel {} :ls)))
