@@ -5,12 +5,12 @@
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
 (def current-path (atom []))
+(def hide-timeout (atom nil))
 
 (defn get-files [path files-cb]
   (log path)
   (let [r (.get js/jQuery "/a/files" (js-obj "path" path))]
     (.done r files-cb)))
-
 
 (defn format-size [n]
   (let [[size postfix] (cond
@@ -27,10 +27,18 @@
   (sort-by #(apply str [(.-type %) (.-name %)]) files))
 
 (defn show-loading-indicator []
-  )
+  (let [to (.setTimeout js/window
+             (fn [] 
+               (reset! hide-timeout nil)
+               (.log js/console "Timeout called, showing dimmer")
+               (show ($ :.dim))))]
+    (reset! hide-timeout to)))
 
 (defn hide-loading-indicator []
-  )
+  (when-not (nil? @hide-timeout)
+    (.clearTimeout js/window @hide-timeout)
+    (reset! hide-timeout nil))
+  (hide ($ :.dim)))
 
 (defn show-no-files-indicator []
   (show ($ :.no-files))
@@ -108,6 +116,7 @@
 
 (defn startup []
   (hide-no-files-indicator)
+  (hide-loading-indicator)
   (push-path ".")
   (attach-click-handler)
   (attach-shortcut-handler))
