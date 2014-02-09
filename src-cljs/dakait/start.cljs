@@ -52,7 +52,7 @@
       [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
        klass (fn [n] (.-type n))
        target (fn [n] (.-name n))
-       to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td></td><td>"
+       to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td>"
                                   (.-name n) "</td><td class='size'>" (file-size n) "</td></tr>"]))
        html-content (apply str (map to-row files))]
       (html ($ "#file-list tbody") html-content))))

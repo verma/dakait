@@ -3,6 +3,9 @@
 ;; You need to copy this file and setup your own properties here
 ;;
 { 
+  ;; The name of the server as its displayed on the file browser
+  ;; :server-name "Server"
+
   ;; The sftp host to connect to
   :sftp-host "sftp.example.com"
 

@@ -1,7 +1,8 @@
 (ns dakait.config
     (:require [carica.core :as car]))
 
-(def defaults { :sftp-port 22
+(def defaults { :server-name "Server"
+                :sftp-port 22
                 :username (System/getProperty "user.name")
                 :base-path "." })
 
@@ -23,7 +24,7 @@
   "Load the configuration setting up appropriate defaults and check if we have
   all the things we need"
   (make-sure-required-exist)
-  (let [props '(:sftp-host :sftp-port :username :base-path :private-key)]
+  (let [props '(:server-name :sftp-host :sftp-port :username :base-path :private-key)]
     (println "Using configuration:")
     (doseq [p props]
       (println (name p) ":" (config p)))))
