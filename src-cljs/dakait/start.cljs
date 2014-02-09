@@ -1,6 +1,6 @@
 (ns dakait.start
   (:use [clojure.string :only [join split]]
-        [jayq.core :only [$ html ajax on bind]]
+        [jayq.core :only [$ html ajax on bind hide show]]
         [jayq.util :only [log]])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
@@ -32,15 +32,30 @@
 (defn hide-loading-indicator []
   )
 
+(defn show-no-files-indicator []
+  (show ($ :.no-files))
+  )
+
+(defn hide-no-files-indicator []
+  (hide ($ :.no-files))
+  )
+
+(defn clear-listing []
+  (html ($ "#file-list tbody") ""))
+
 (defn show-files [files]
-  (let 
-    [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
-     klass (fn [n] (.-type n))
-     target (fn [n] (.-name n))
-     to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td></td><td>"
-                                (.-name n) "</td><td class='size'>" (file-size n) "</td></tr>"]))
-     html-content (apply str (map to-row files))]
-    (html ($ "#file-list tbody") html-content)))
+  (if (= (count files) 0)
+    (do
+      (clear-listing)
+      (show-no-files-indicator))
+    (let 
+      [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
+       klass (fn [n] (.-type n))
+       target (fn [n] (.-name n))
+       to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td></td><td>"
+                                  (.-name n) "</td><td class='size'>" (file-size n) "</td></tr>"]))
+       html-content (apply str (map to-row files))]
+      (html ($ "#file-list tbody") html-content))))
 
 (defn make-path [elems]
   (join "/" elems))
@@ -60,6 +75,7 @@
 
 (defn load-path [path]
   (let [req-path (join "/" path)]
+    (hide-no-files-indicator)
     (show-loading-indicator)
     (get-files req-path (fn [files]
                           (hide-loading-indicator)
@@ -91,6 +107,7 @@
           (reset-path (.getAttribute me "href"))))))
 
 (defn startup []
+  (hide-no-files-indicator)
   (push-path ".")
   (attach-click-handler)
   (attach-shortcut-handler))
