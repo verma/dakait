@@ -15,9 +15,6 @@
 
 (defroutes app-routes
   (GET "/" [] (index-page))
-  (GET "/a/lfiles" {params :params}
-    (let [dst-path (mk-path (:path params))]
-       (as-json (all-files dst-path))))
   (GET "/a/files" {params :params }
        (as-json (all-remote-files (:path params))))
   (GET "/a/params" {params :params} (pr-str params))

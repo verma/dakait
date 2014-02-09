@@ -8,7 +8,6 @@
 
 (def ssh-agent (atom nil))
 (def ssh-session (atom nil))
-(def ssh-channel (atom nil))
 
 (defn- agent-with-identity []
   "Get an agent with properties setup correctly and the identity added from configuration"
@@ -23,7 +22,8 @@
   @ssh-agent)
 
 (defn- session []
-  "Get the currently active session, if one doesn't exist, create a new one"
+  "Get the currently active session, if one doesn't exist, create a new one and make sure the
+  session is connected"
   (when (nil? @ssh-session)
     (let [host (config :sftp-host)
           user (config :username)
@@ -33,23 +33,10 @@
                                            :username user
                                            :strict-host-key-checking :no})]
       (reset! ssh-session session)))
+  (when-not (ssh/connected? @ssh-session)
+    (ssh/connect @ssh-session))
   @ssh-session)
 
-(defn- channel []
-  "Get a connected channel, if the session is disconnected, connect it and then reconnect the channel
-  and return it"
-  (let [this-session (session)]
-    ;; reconnect session if not connected
-    (when-not (ssh/connected? this-session)
-      (ssh/connect this-session))
-    (when (nil? @ssh-channel)
-      (let [channel (ssh/ssh-sftp this-session)]
-        (reset! ssh-channel channel))))
-  (when-not (ssh/connected-channel? @ssh-channel)
-    (info "Reconnecting channel..")
-    (ssh/connect-channel @ssh-channel))
-  @ssh-channel)
-  
 (defn join-path [& parts]
   "Join the paths together"
   (.getPath (apply io/file parts)))
@@ -65,9 +52,11 @@
 
 (defn list-remote-files [path]
   "Get the list of all files at the given path"
-  (let [this-channel (channel)]
-      (when (not (nil? path)) (ssh/sftp this-channel {} :cd path))
-      (ssh/sftp this-channel {} :ls)))
+  (let [this-channel (ssh/ssh-sftp (session))]
+    (ssh/with-channel-connection this-channel
+      (when (not (nil? path))
+        (ssh/sftp this-channel {} :cd path))
+      (ssh/sftp this-channel {} :ls))))
 
 (defn all-remote-files [path]
   (let [query-path (join-path (config :base-path) path)
@@ -82,11 +71,4 @@
          (map (fn [e] { :name (.getFilename e) 
                         :type (file-type e)
                         :size (file-size e)})))))
-
-(defn mk-path [p]
-  (let
-    [base-path (io/file "/Users/verma")]
-    (cond
-      (nil? p) (.getPath base-path)
-      :else (.getPath (io/file base-path (io/file p))))))
 
