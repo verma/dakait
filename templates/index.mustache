@@ -68,7 +68,20 @@
 			opacity: 0.8;
 		}
 
-		.loader {
+		#error .message {
+			position: absolute;
+			left: 0px;
+			width: 100%;
+			top: 200px;
+			height: 50px;
+			text-align: center;
+			color: #aa0000;
+			font-weight: bold;
+			font-size: 20px;
+			font-style: italic;
+		}
+
+		.dim .loader {
 			position: absolute;
 			left: 0px;
 			width: 100%;
@@ -104,8 +117,11 @@
 			</tbody>
 		</table>
 		<div class="no-files">No files</div>
-		<div class="dim">
+		<div id="loader" class="dim">
 			<div class="loader"></div>
+		</div>
+		<div id="error" class="dim">
+			<div class="message"></div>
 		</div>
     </div><!-- /.container -->
 

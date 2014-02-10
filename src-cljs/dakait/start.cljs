@@ -7,10 +7,13 @@
 (def current-path (atom []))
 (def hide-timeout (atom nil))
 
-(defn get-files [path files-cb]
+(defn get-files [path files-cb error-cb]
   (log path)
   (let [r (.get js/jQuery "/a/files" (js-obj "path" path))]
-    (.done r files-cb)))
+    (.done r files-cb)
+    (.fail r 
+           (fn [e] 
+             (error-cb (.-responseJSON e))))))
 
 (defn format-size [n]
   (let [[size postfix] (cond
@@ -30,15 +33,15 @@
   (let [to (.setTimeout js/window
              (fn [] 
                (reset! hide-timeout nil)
-               (.log js/console "Timeout called, showing dimmer")
-               (show ($ :.dim))))]
+               (.log js/console "Timeout called, showing loader")
+               (show ($ :#loader))) 100)]
     (reset! hide-timeout to)))
 
 (defn hide-loading-indicator []
   (when-not (nil? @hide-timeout)
     (.clearTimeout js/window @hide-timeout)
     (reset! hide-timeout nil))
-  (hide ($ :.dim)))
+  (hide ($ :#loader)))
 
 (defn show-no-files-indicator []
   (show ($ :.no-files))
@@ -47,6 +50,13 @@
 (defn hide-no-files-indicator []
   (hide ($ :.no-files))
   )
+
+(defn hide-error []
+  (hide ($ :#error)))
+
+(defn show-error [message]
+  (html ($ "#error .message") (str "Sorry, there was an error processing your request:<br><br>" message))
+  (show ($ "#error")))
 
 (defn clear-listing []
   (html ($ "#file-list tbody") ""))
@@ -85,10 +95,15 @@
   (let [req-path (join "/" path)]
     (hide-no-files-indicator)
     (show-loading-indicator)
-    (get-files req-path (fn [files]
-                          (hide-loading-indicator)
-                          (show-path path)
-                          (->> files sort-files show-files)))))
+    (get-files req-path 
+               (fn [files]
+                 (hide-loading-indicator)
+                 (show-path path)
+                 (->> files sort-files show-files))
+               (fn [error]
+                 (hide-loading-indicator)
+                 (show-error (.-message error))))))
+
 
 (defn push-path [elem]
   (reset! current-path (conj @current-path elem))
@@ -117,6 +132,7 @@
 (defn startup []
   (hide-no-files-indicator)
   (hide-loading-indicator)
+  (hide-error)
   (push-path ".")
   (attach-click-handler)
   (attach-shortcut-handler))

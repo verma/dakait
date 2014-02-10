@@ -13,10 +13,22 @@
     :headers { "Content-Type" "application/json; charset=utf-8" }
     :body (json/write-str m) })
 
+(defn as-json-error [error-message]
+  { :status 503
+    :headers { "Content-Type" "application/json; charset=utf-8" }
+    :body (json/write-str { :message error-message }) })
+
+(defn handle-files
+  "Fetch files for the given path"
+  [path]
+  (try
+    (as-json (all-remote-files path))
+    (catch Exception e (as-json-error (.getMessage e)))))
+
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/a/files" {params :params }
-       (as-json (all-remote-files (:path params))))
+       (handle-files (:path params)))
   (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
