@@ -61,6 +61,20 @@
 (defn clear-listing []
   (html ($ "#file-list tbody") ""))
 
+(defn format-date [n]
+  (let [dt (* (.-modified n) 1000)
+        now (.getTime (js/Date.))
+        diffInSecs (quot (- now dt) 1000)
+        diffInHours (quot diffInSecs 3600)]
+    (log (.-name n) diffInSecs " " diffInHours)
+    (cond
+      (< diffInHours 1) "Less than an hour ago"
+      (< diffInHours 2) "An hour ago"
+      (< diffInHours 24) (str diffInHours " hours ago")
+      (< diffInHours 48) "A day ago"
+      (< diffInHours 168) (str (quot diffInHours 24) " days ago")
+      :else (.toDateString (js/Date. dt)))))
+
 (defn show-files [files]
   (if (= (count files) 0)
     (do
@@ -71,7 +85,9 @@
        klass (fn [n] (.-type n))
        target (fn [n] (.-name n))
        to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td>"
-                                  (.-name n) "</td><td class='size'>" (file-size n) "</td></tr>"]))
+                                  (.-name n) "</td><td class='size'>"
+                                  (file-size n) "</td><td class='last-modified'>"
+                                  (format-date n) "</td></tr>"]))
        html-content (apply str (map to-row files))]
       (html ($ "#file-list tbody") html-content))))
 

@@ -64,11 +64,13 @@
         not-hidden? (fn [e] (not= (.charAt (.getFilename e) 0) \.))
         file-type (fn [e] (if (.isDir (.getAttrs e)) "dir" "file"))
         file-size (fn [e] (.getSize (.getAttrs e)))
+        last-modified (fn [e] (-> e (.getAttrs) (.getMTime)))
         ]
     (info "query path: " query-path)
     (->> entries 
          (filter not-hidden?)
          (map (fn [e] { :name (.getFilename e) 
                         :type (file-type e)
+                        :modified (last-modified e)
                         :size (file-size e)})))))
 
