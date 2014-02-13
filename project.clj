@@ -3,7 +3,7 @@
   :url "https://github.com/verma/dakait"
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [compojure "1.1.6"]
-                 [org.clojure/clojurescript "0.0-2138"]
+                 [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/data.json "0.2.4"]
                  [de.ubercode.clostache/clostache "1.3.1"]
                  [sonian/carica "1.0.4" :exclusions [[cheshire]]]

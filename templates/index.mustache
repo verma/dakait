@@ -23,6 +23,11 @@
 		.listing {
 			font-size: 12px;
 		}
+
+		.listing thead {
+			font-size: 14px;
+			font-style: italic;
+		}
 		.file {
 			color: #666;
 		}
@@ -113,9 +118,9 @@
 		<h3 class="current-path"></h3>
 		<table class="table listing" id="file-list">
 			<thead>
-				<th>Name</th>
-				<th class="size">Size</th>
-				<th class="last-modified">Last Modified</th>
+				<th>Name <span id="sort-name"></span></th>
+				<th class="size">Size <span id="sort-size"></span></th>
+				<th class="last-modified">Last Modified <span id="sort-modified"></span></th>
 			</thead>
 			<tbody>
 			</tbody>

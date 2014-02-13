@@ -1,11 +1,41 @@
 (ns dakait.start
   (:use [clojure.string :only [join split]]
-        [jayq.core :only [$ html ajax on bind hide show]]
+        [jayq.core :only [$ html ajax on bind hide show attr add-class]]
         [jayq.util :only [log]])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
 (def current-path (atom []))
 (def hide-timeout (atom nil))
+
+(def current-sort-key (atom :name))           ;; default sort key is name
+(def current-order-is-ascending? (atom true)) ;; default order is ascending
+
+(def current-file-set (atom {}))              ;; current set of files
+
+;; Sort map, each function takes one argument which indicates whether we intend
+;; to do an ascending or a descending sort
+;;
+(def sort-funcs 
+  {:name (fn [items asc]
+           (sort-by
+             #(str (.-type %) (.-name %))
+             (if (true? asc) compare (comp - compare))
+             items)) 
+
+   :size (fn [items asc]
+           (sort-by
+             (if (true? asc)
+               #(.-size %)
+               #(- (.-size %)))
+             items))
+
+   :modified (fn [items asc]
+               (sort-by
+                 (if (true? asc)
+                   #(.-modified %)
+                   #(- (.-modified %)))
+                 items))
+   })
 
 (defn get-files [path files-cb error-cb]
   (log path)
@@ -27,7 +57,8 @@
     (apply str [(.toFixed size fixedSize) " " postfix])))
 
 (defn sort-files [files]
-  (sort-by #(apply str [(.-type %) (.-name %)]) files))
+  (let [f (@current-sort-key sort-funcs)]
+    (f files @current-order-is-ascending?)))
 
 (defn show-loading-indicator []
   (let [to (.setTimeout js/window
@@ -107,6 +138,32 @@
         path-string (join "/" (map make-link link-parts))]
     (html ($ :.current-path) path-string)))
 
+(defn show-ui-sort-indicators []
+  (let [sort-key (name @current-sort-key)
+        sort-asc @current-order-is-ascending?
+        sort-fields ["#sort-name" "#sort-size" "#sort-modified"]]
+    ;; first clear all classes
+    (doseq [f sort-fields]
+      (attr ($ f) :class ""))
+    ;; now apply class to the new element
+    (add-class
+      ($ (str "#sort-" sort-key))
+      (if (true? sort-asc)
+        "glyphicon glyphicon-chevron-down"
+        "glyphicon glyphicon-chevron-up"))))
+
+(defn refresh-view [files]
+  (->> files
+       sort-files
+       show-files))
+
+(defn set-sort [type asc]
+  (reset! current-sort-key type)
+  (reset! current-order-is-ascending? asc)
+  (show-ui-sort-indicators)
+  (when-not (zero? (count @current-file-set))
+    (refresh-view @current-file-set)))
+
 (defn load-path [path]
   (let [req-path (join "/" path)]
     (hide-no-files-indicator)
@@ -115,7 +172,8 @@
                (fn [files]
                  (hide-loading-indicator)
                  (show-path path)
-                 (->> files sort-files show-files))
+                 (reset! current-file-set files)
+                 (refresh-view files))
                (fn [error]
                  (hide-loading-indicator)
                  (show-error (.-message error))))))
@@ -146,6 +204,7 @@
           (reset-path (.getAttribute me "href"))))))
 
 (defn startup []
+  (set-sort :name true)
   (hide-no-files-indicator)
   (hide-loading-indicator)
   (hide-error)
