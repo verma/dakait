@@ -164,6 +164,16 @@
   (when-not (zero? (count @current-file-set))
     (refresh-view @current-file-set)))
 
+(defn push-sort-order
+  "Push a new state onto the sort order state machine"
+  [type]
+  (let [sk @current-sort-key
+        asc @current-order-is-ascending?]
+    (cond
+      (= sk type) (set-sort type (not asc))
+      :else (set-sort type true))))
+
+
 (defn load-path [path]
   (let [req-path (join "/" path)]
     (hide-no-files-indicator)
@@ -203,6 +213,13 @@
         (this-as me
           (reset-path (.getAttribute me "href"))))))
 
+(defn attach-sort-handlers []
+  (doseq [n [:name :size :modified]]
+    (on ($ (str "#action-sort-" (name n))) :click
+        (fn [e]
+          (.preventDefault e)
+          (push-sort-order n)))))
+
 (defn startup []
   (set-sort :name true)
   (hide-no-files-indicator)
@@ -210,6 +227,7 @@
   (hide-error)
   (push-path ".")
   (attach-click-handler)
+  (attach-sort-handlers)
   (attach-shortcut-handler))
 
 (ready (startup))
