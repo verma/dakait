@@ -2,6 +2,8 @@
   :description "A tool to download files from your FTP/SFTP servers in an organized way."
   :url "https://github.com/verma/dakait"
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
+                 [org.clojure/core.match "0.2.1"]
                  [compojure "1.1.6"]
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/data.json "0.2.4"]

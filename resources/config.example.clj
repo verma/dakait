@@ -3,6 +3,9 @@
 ;; You need to copy this file and setup your own properties here
 ;;
 { 
+  ;; Place to store program configuration data
+  :config-data-dir "/change/this/to/some/dir"
+
   ;; The name of the server as its displayed on the file browser
   ;; :server-name "Server"
 

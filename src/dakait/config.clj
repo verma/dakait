@@ -8,7 +8,7 @@
 
 (defn- make-sure-required-exist []
   "Makes sure that required properties exist"
-  (let [required '(:sftp-host :private-key)]
+  (let [required '(:config-data-dir :sftp-host :private-key)]
     (doseq [k required]
       (when (nil? (car/config k))
         (throw (Exception. (str "Required configuration: " (name k))))))))
@@ -24,7 +24,9 @@
   "Load the configuration setting up appropriate defaults and check if we have
   all the things we need"
   (make-sure-required-exist)
-  (let [props '(:server-name :sftp-host :sftp-port :username :base-path :private-key)]
+  (let [props '(:config-data-dir 
+                 :server-name :sftp-host
+                 :sftp-port :username :base-path :private-key)]
     (println "Using configuration:")
     (doseq [p props]
       (println (name p) ":" (config p)))))
