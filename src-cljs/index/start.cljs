@@ -1,4 +1,4 @@
-(ns dakait.start
+(ns dakait.index
   (:use [clojure.string :only [join split]]
         [jayq.core :only [$ html ajax on bind hide show attr add-class]]
         [jayq.util :only [log]])

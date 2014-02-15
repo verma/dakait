@@ -21,7 +21,14 @@
   :hooks [leiningen.cljsbuild]
 
   :cljsbuild {
-    :builds [{:source-paths ["src-cljs"] 
-              :compiler {:output-to "resources/public/js/main.js"
+    :builds [
+             {:source-paths ["src-cljs/index"] 
+              :compiler {:output-to "resources/public/js/index.js"
                          :optimizations :whitespace
-                         :pretty-print true}}]})
+                         :pretty-print true}}
+             
+             {:source-paths ["src-cljs/tags"] 
+              :compiler {:output-to "resources/public/js/tags.js"
+                         :optimizations :whitespace
+                         :pretty-print true}}
+             ]})

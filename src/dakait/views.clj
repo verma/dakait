@@ -9,3 +9,7 @@
 (defn index-page []
   (render-template "templates/index.mustache" {:title "Hello"
                                                :server-name (config :server-name) }))
+
+(defn tags-page []
+  (render-template "templates/tags.mustache" {:title "Tags"
+                                              :server-name (config :server-name)}))

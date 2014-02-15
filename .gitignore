@@ -8,6 +8,8 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
+/resources/public/js/index.js
+/resources/public/js/tags.js
 /resources/public/js/main.js
 .DS_Store
 /resources/config.clj

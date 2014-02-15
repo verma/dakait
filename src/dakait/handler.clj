@@ -47,6 +47,7 @@
 
 (defroutes app-routes
   (GET "/" [] (index-page))
+  (GET "/tags" [] (tags-page))
   (GET "/a/files" {params :params }
        (handle-files (:path params)))
   (GET "/a/tags" [] (handle-get-all-tags))
