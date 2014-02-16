@@ -5,7 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.downloader :only (channel run)]
-        [dakait.tags :only (load-tags get-all-tags add-tag)]
+        [dakait.tags :only (load-tags get-all-tags add-tag remove-tag)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
             [clojure.data.json :as json]
@@ -57,6 +57,12 @@
   (add-tag name target (random-html-color))
   (as-json {:status 1}))
 
+(defn handle-remove-tag
+  "Handle deletion of tags"
+  [name]
+  (remove-tag name)
+  (as-json {:success 1}))
+
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/tags" [] (tags-page))
@@ -65,6 +71,8 @@
   (GET "/a/tags" [] (handle-get-all-tags))
   (POST "/a/tags" {params :params}
         (handle-create-tag (:name params) (:target params)))
+  (DELETE "/a/tags/:name" [name]
+          (handle-remove-tag name))
   (POST "/a/apply-tag" {params :params }
        (handle-apply-tag (:tag params) (:target params)))
   (GET "/a/params" {params :params} (pr-str params))

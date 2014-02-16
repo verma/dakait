@@ -19,7 +19,15 @@
                                              "target" target))]
     (.success r scb)
     (.fail r ecb)))
-                                      
+
+(defn remove-tag-remote
+  "Remote a tag by posting a request"
+  [name scb ecb]
+  (let [r (.ajax js/jQuery
+                 (js-obj "url" (str "/a/tags/" name)
+                         "type" "DELETE"))]
+    (.success r scb)
+    (.fail r ecb)))
 
 (defn show-tags [tags]
   (let [content (map 
@@ -36,10 +44,18 @@
       (when-not (nil? (seq content))
         (html elem (str content))))))
 
+(defn load-tags
+  "Loads tags by querying the remote server"
+  []
+  (get-tags show-tags #(log %)))
+
 (defn delete-tag
   "Delete a tag"
   [name]
-  (log (str "Deleting " name)))
+  (log (str "Deleting " name))
+  (remove-tag-remote name
+                     #(load-tags)
+                     #(load-tags)))
 
 (defn attach-del-handlers
   "Attach handlers for delete command"
@@ -54,10 +70,6 @@
   [msg]
   (html ($ :#add-tag-error) msg))
 
-(defn load-tags
-  "Loads tags by querying the remote server"
-  []
-  (get-tags show-tags #(log %)))
 
 (defn add-tag
   "Add a new tag given the name and the target, makes sure to show updated results locally and 
