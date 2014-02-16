@@ -5,7 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.downloader :only (channel run)]
-        [dakait.tags :only (load-tags get-all-tags)]
+        [dakait.tags :only (load-tags get-all-tags add-tag)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
             [clojure.data.json :as json]
@@ -20,6 +20,12 @@
   { :status 503
     :headers { "Content-Type" "application/json; charset=utf-8" }
     :body (json/write-str { :message error-message }) })
+
+(defn random-html-color
+  "Generate an awesome randome html color"
+  []
+  (let [r (java.util.Random.)]
+    (str "hsl(" (.nextInt r 360) ",50%,70%)")))
 
 (defn handle-files
   "Fetch files for the given path"
@@ -45,12 +51,20 @@
         (nil? s) []
         :else (map (fn [[n m]] (assoc m :name n)) s)))))
 
+(defn handle-create-tag
+  "Handle creation of new tags"
+  [name target]
+  (add-tag name target (random-html-color))
+  (as-json {:status 1}))
+
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/tags" [] (tags-page))
   (GET "/a/files" {params :params }
        (handle-files (:path params)))
   (GET "/a/tags" [] (handle-get-all-tags))
+  (POST "/a/tags" {params :params}
+        (handle-create-tag (:name params) (:target params)))
   (POST "/a/apply-tag" {params :params }
        (handle-apply-tag (:tag params) (:target params)))
   (GET "/a/params" {params :params} (pr-str params))

@@ -45,6 +45,28 @@
 			font-style: italic;
 		}
 
+		.add-tag {
+			margin-top: 40px;
+		}
+
+		#add-tag-form {
+			margin-top: 50px;
+			text-align: right;
+		}
+
+		#add-tag-form input[type="text"] {
+			font-size: 20px;
+			font-weight: bold;
+		}
+
+		#add-tag-error {
+			width: 100%;
+			text-align:right;
+			color: #900;
+			margin-top: 10px;
+		}
+
+
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -65,6 +87,18 @@
 			<tbody>
 			</tbody>
 		</table>
+		<form class="form-inline" role="form" id="add-tag-form">
+			<div class="form-group">
+				<label class="sr-only" for="tag-name">Email address</label>
+				<input type="text" class="form-control" id="tag-name" placeholder="Name">
+			</div>
+			<div class="form-group">
+				<label class="sr-only" for="tag-target">Password</label>
+				<input type="text" class="form-control" id="tag-target" placeholder="Target">
+			</div>
+			<button type="submit" class="btn btn-success" id="add-tag-action"><span class="glyphicon glyphicon-plus"></span> Add</button>
+		</form>
+		<div id="add-tag-error"></div>
     </div><!-- /.container -->
 
 
