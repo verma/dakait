@@ -8,7 +8,9 @@
 
 (defn- make-sure-required-exist []
   "Makes sure that required properties exist"
-  (let [required '(:config-data-dir :sftp-host :private-key)]
+  (let [required '(:config-data-dir
+                    :local-base-path
+                    :sftp-host :private-key)]
     (doseq [k required]
       (when (nil? (car/config k))
         (throw (Exception. (str "Required configuration: " (name k))))))))
@@ -25,6 +27,7 @@
   all the things we need"
   (make-sure-required-exist)
   (let [props '(:config-data-dir 
+                 :local-base-path
                  :server-name :sftp-host
                  :sftp-port :username :base-path :private-key)]
     (println "Using configuration:")

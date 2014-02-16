@@ -25,4 +25,8 @@
   ;; The base path where the connection will cd into, thus making it your
   ;; base-path
   :base-path "./some/dir"
+
+  ;; The path at which files are stored locally, all tag targets are built relative
+  ;; to this file
+  :local-base-path "/some/local/dir"
 }
