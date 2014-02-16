@@ -1,11 +1,12 @@
 (ns dakait.index
   (:use [clojure.string :only [join split]]
-        [jayq.core :only [$ html ajax on bind hide show attr add-class]]
+        [jayq.core :only [$ html text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
 (def current-path (atom []))
 (def hide-timeout (atom nil))
+(def tag-store (atom nil))
 
 (def current-sort-key (atom :name))           ;; default sort key is name
 (def current-order-is-ascending? (atom true)) ;; default order is ascending
@@ -44,6 +45,25 @@
     (.fail r 
            (fn [e] 
              (error-cb (.-responseJSON e))))))
+
+(defn tag-attach [path tag done]
+  (log "Attaching " tag " to path: " path)
+  (let [r (.post js/jQuery "/a/apply-tag" (js-obj "tag" tag
+                                                  "target" path))]
+    (.success r
+           #(if (= (.-status %) 1)
+              (done true) (done false)))
+    (.fail r
+           #(done false))))
+
+(defn update-tags [done-cb]
+  (log "querying tags")
+  (let [r (.get js/jQuery "/a/tags")]
+    (.done r
+           (fn [data]
+             (reset! tag-store data)
+             (done-cb)))
+    (.fail r done-cb)))
 
 (defn format-size [n]
   (let [[size postfix] (cond
@@ -106,6 +126,26 @@
       (< diffInHours 168) (str (quot diffInHours 24) " days ago")
       :else (.toDateString (js/Date. dt)))))
 
+(defn make-tag-button
+  "Makes required html to build tag dropdown"
+  [tags]
+  (let [tag-items (map
+                    #(str "<li>"
+                          "<a class='tagref' style='color:" (.-color %) "' href='#'>"
+                          (.-name %)
+                          "</a>"
+                          "</li>")
+                    tags)]
+  (str
+    "<div class='btn-group'>"
+    "<button type='button' class='btn btn-default btn-xs dropdown-toggle' data-toggle='dropdown'>"
+    "<span class='caret'></span>"
+    "</button>"
+    "<ul class='dropdown-menu' role='menu'>"
+    (apply str tag-items)
+    "</ul>"
+    "</div>")))
+
 (defn show-files [files]
   (if (= (count files) 0)
     (do
@@ -115,24 +155,29 @@
       [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
        linked (fn [n]
                 (if (= (.-type n) "dir")
-                  (str "<a href='#' class='target-link' target='"
-                       (.-name n)
-                       "'>"
+                  (str "<a href='#' class='target-link'>"
                        (.-name n) "</a>")
                   (.-name n)))
        target (fn [n] (.-name n))
-       to-row (fn [n] (str "<div class='list-item " (.-type n) "'>"
-                           "<div class='list-item-name'>"
+       to-row (fn [n] (str "<div class='list-item " (.-type n) "' target='" (target n) "'>"
+                           "<div class='row'>"
+                           "<div class='col-sm-10 list-item-name'>"
                            (linked n)
                            "</div>"
-                           "<div class='subitem row'>"
+                           "<div class='list-item-size col-sm-2'>"
+                           (file-size n)
+                           "</div>"
+                           "</div>"
+                           "<div class='subitem'>"
+                           "<div class='row'>"
+                           "<div class='col-sm-8 list-item-tag-button'>"
+                           (make-tag-button @tag-store)
+                           "<span class='list-item-tag'></span>"
+                           "</div>"
                            "<div class='list-item-modified col-sm-4'>"
                            (format-date n)
                            "</div>"
-                           "<div class='list-item-size col-sm-4'>"
-                           (file-size n)
                            "</div>"
-                           "<div class='clearfix'></div>"
                            "</div>"
                            "</div>"))
        html-content (apply str (map to-row files))]
@@ -194,15 +239,16 @@
   (let [req-path (join "/" path)]
     (hide-no-files-indicator)
     (show-loading-indicator)
-    (get-files req-path 
-               (fn [files]
-                 (hide-loading-indicator)
-                 (show-path path)
-                 (reset! current-file-set files)
-                 (refresh-view files))
-               (fn [error]
-                 (hide-loading-indicator)
-                 (show-error (.-message error))))))
+    (update-tags
+      #(get-files req-path 
+                  (fn [files]
+                    (hide-loading-indicator)
+                    (show-path path)
+                    (reset! current-file-set files)
+                    (refresh-view files))
+                  (fn [error]
+                    (hide-loading-indicator)
+                    (show-error (.-message error)))))))
 
 
 (defn push-path [elem]
@@ -220,7 +266,31 @@
       (fn [e]
         (.preventDefault e)
         (this-as me
-          (push-path (.getAttribute me "target"))))))
+          (let [jme ($ me)
+                parent-item (.closest jme ".list-item")
+                path (attr parent-item "target")]
+            (push-path path))))))
+
+(defn attach-tagref-handler []
+  (on ($ :.listing) :click :a.tagref
+      (fn [e]
+        (.preventDefault e)
+        (this-as me
+          (let [jme ($ me)
+                tag (text jme)
+                style (attr jme "style")
+                parent (.closest jme ".list-item-tag-button")
+                parent-item (.closest jme ".list-item")
+                path (attr parent-item "target")
+                span (.find parent ".list-item-tag")]
+            (add-class span "loading")
+            (tag-attach path tag
+                        (fn [res]
+                          (remove-class span "loading")
+                          (when (true? res)
+                             (attr span "style" 
+                                   (str style ";font-weight:bold;font-style:italic;"))
+                             (html span tag)))))))))
 
 (defn attach-shortcut-handler []
   (on ($ :.current-path) :click :a
@@ -243,6 +313,7 @@
   (hide-error)
   (push-path ".")
   (attach-click-handler)
+  (attach-tagref-handler)
   (attach-sort-handlers)
   (attach-shortcut-handler))
 

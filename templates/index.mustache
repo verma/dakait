@@ -25,7 +25,11 @@
 		}
 
 		.listing .list-item {
-			border: 1px solid white;
+			margin-bottom: 15px;
+		}
+
+		.listing .title {
+			margin-bottom: 5px;
 		}
 
 		.file {
@@ -42,23 +46,33 @@
 
 		.listing .subitem {
 			font-weight: normal;
-			font-size: 12px;
+			font-size: 14px;
 			color: #999;
 		}
 
 		.listing .list-item-size {
 			text-align: right;
+			padding-right: 20px;
+		}
+		.listing .list-item-modified {
+			padding-right: 20px;
+			text-align: right;
+		}
+		.listing .list-item-tag {
+			padding-left: 10px;
+		}
+		.listing .list-item-tag-button {
 		}
 
 		@media (max-width: 768px) {
 			.listing .list-item-size {
 				text-align: left;
 			}
+			.listing .list-item-modified {
+				text-align: left;
+			}
 		}
 
-		.listing .list-item-modified {
-		}
-		
 		a.target-link:hover {
 			text-decoration: none;
 		}

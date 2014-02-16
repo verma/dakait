@@ -5,7 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.downloader :only (channel run)]
-        [dakait.tags :only (load-tags get-all-tags add-tag remove-tag)]
+        [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
             [clojure.data.json :as json]
@@ -16,10 +16,19 @@
     :headers { "Content-Type" "application/json; charset=utf-8" }
     :body (json/write-str m) })
 
-(defn as-json-error [error-message]
-  { :status 503
+(defn as-json-error
+  ([code error-message]
+   { :status code
     :headers { "Content-Type" "application/json; charset=utf-8" }
     :body (json/write-str { :message error-message }) })
+  ([error-message]
+   (as-json-error 503 error-message)))
+
+(defmacro do-with-cond [condition error msg & body]
+  `(if ~condition
+     (as-json-error ~error ~msg)
+     (do
+       ~@body)))
 
 (defn random-html-color
   "Generate an awesome randome html color"
@@ -37,12 +46,14 @@
 (defn handle-apply-tag
   "Handle application of tags onto files"
   [tag target]
-  (if
-    (or (nil? tag) (nil? target))
-    (as-json-error "Tag and target file needs to be specified")
-    (do
-      (go (>! channel [:get target tag]))
-      (as-json {:status 1}))))
+  (do-with-cond 
+    (or (nil? tag) (nil? target)) 400 "Tag and taget file needs to be specified"
+    (let [tag-obj (find-tag tag)
+          dest (get tag-obj "target")]
+      (do-with-cond
+        (or (nil? tag-obj) (nil? dest)) 400 "The specified tag is invalid"
+        (go (>! channel [:get target (get tag-obj "target")]))
+        (as-json {:status 1})))))
 
 (defn handle-get-all-tags []
   (let [s (seq (get-all-tags))]
