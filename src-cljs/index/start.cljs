@@ -90,7 +90,7 @@
   (show ($ "#error")))
 
 (defn clear-listing []
-  (html ($ "#file-list tbody") ""))
+  (html ($ ".listing") ""))
 
 (defn format-date [n]
   (let [dt (* (.-modified n) 1000)
@@ -113,14 +113,30 @@
       (show-no-files-indicator))
     (let 
       [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
-       klass (fn [n] (.-type n))
+       linked (fn [n]
+                (if (= (.-type n) "dir")
+                  (str "<a href='#' class='target-link' target='"
+                       (.-name n)
+                       "'>"
+                       (.-name n) "</a>")
+                  (.-name n)))
        target (fn [n] (.-name n))
-       to-row (fn [n] (apply str ["<tr class=\"" (klass n) "\" target=\"" (target n) "\"><td>"
-                                  (.-name n) "</td><td class='size'>"
-                                  (file-size n) "</td><td class='last-modified'>"
-                                  (format-date n) "</td></tr>"]))
+       to-row (fn [n] (str "<div class='list-item " (.-type n) "'>"
+                           "<div class='list-item-name'>"
+                           (linked n)
+                           "</div>"
+                           "<div class='subitem row'>"
+                           "<div class='list-item-modified col-sm-4'>"
+                           (format-date n)
+                           "</div>"
+                           "<div class='list-item-size col-sm-4'>"
+                           (file-size n)
+                           "</div>"
+                           "<div class='clearfix'></div>"
+                           "</div>"
+                           "</div>"))
        html-content (apply str (map to-row files))]
-      (html ($ "#file-list tbody") html-content))))
+      (html ($ ".listing") html-content))))
 
 (defn make-path [elems]
   (join "/" elems))
@@ -200,7 +216,7 @@
     (load-path @current-path)))
 
 (defn attach-click-handler []
-  (on ($ :table) :click :.dir
+  (on ($ :.listing) :click :a.target-link
       (fn [e]
         (.preventDefault e)
         (this-as me

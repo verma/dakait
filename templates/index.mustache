@@ -14,37 +14,55 @@
     <link href="/css/bootstrap.css" rel="stylesheet">
 
 	<style>
-		.size {
-			text-align: right;
-		}
-		.last-modified {
-			text-align: right;
+		.name {
+			font-style: italic;
+			font-weight: bold;
+			text-transform: uppercase;
 		}
 		.listing {
-			font-size: 12px;
+			font-size: 20px;
+			margin: 20px 0px;
 		}
 
-		.listing thead {
-			font-size: 14px;
-			font-style: italic;
+		.listing .list-item {
+			border: 1px solid white;
 		}
+
 		.file {
 			color: #666;
+			font-weight: normal;
 		}
 		.dir {
 			color: #444;
 			font-weight: bold;
 		}
-		.dir:hover {
-			background-color: #00568B;
-			color: white;
-			cursor: pointer;
-		}
-		.name {
-			text-transform: uppercase;
-			font-style: italic;
+		.listing .list-item-name {
 			font-weight: bold;
 		}
+
+		.listing .subitem {
+			font-weight: normal;
+			font-size: 12px;
+			color: #999;
+		}
+
+		.listing .list-item-size {
+			text-align: right;
+		}
+
+		@media (max-width: 768px) {
+			.listing .list-item-size {
+				text-align: left;
+			}
+		}
+
+		.listing .list-item-modified {
+		}
+		
+		a.target-link:hover {
+			text-decoration: none;
+		}
+
 
 		.current-path {
 			color: #999;
@@ -116,15 +134,15 @@
     <div class="container">
 		<h1 class="name">{{server-name}}</h1>
 		<h3 class="current-path"></h3>
-		<table class="table listing" id="file-list">
-			<thead>
-				<th><a href="#" id="action-sort-name">Name</a> <span id="sort-name"></span></th>
-				<th class="size"><a href="#" id="action-sort-size">Size</a> <span id="sort-size"></span></th>
-				<th class="last-modified"><a href="#" id="action-sort-modified">Last Modified</a> <span id="sort-modified"></span></th>
-			</thead>
-			<tbody>
-			</tbody>
-		</table>
+
+		<div class="btn-group btn-group-justified" id="sorter">
+			<a class="btn btn-default" role="button" id="action-sort-name">Name <span id="sort-name"><span></a>
+			<a class="btn btn-default" role="button" id="action-sort-size">Size <span id="sort-size"></span></a>
+			<a class="btn btn-default" role="button" id="action-sort-modified">Date Modified <span id="sort-modified"></span></a>
+		</div>
+		
+		<div class="listing">
+		</div>
 		<div class="no-files">No files</div>
 		<div id="loader" class="dim">
 			<div class="loader"></div>
