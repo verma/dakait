@@ -33,7 +33,7 @@
 (defn add-tag
   "Add the given tag to the list of tags"
   [name target color]
-  (reset! all-tags (assoc @all-tags name {:target target :color color}))
+  (reset! all-tags (assoc @all-tags name {"target" target "color" color}))
   (flush-to-disk))
 
 (defn find-tag
