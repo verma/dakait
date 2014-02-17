@@ -4,9 +4,11 @@
         dakait.files
         dakait.config
         [clojure.core.async :only(>! go)]
+        [dakait.util :only (join-path)]
         [dakait.downloader :only (channel run)]
-        [dakait.assocs :only (load-associations add-association)]
+        [dakait.assocs :only (load-associations add-association get-association)]
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
+        [clojure.tools.logging :only (info error)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
             [clojure.data.json :as json]
@@ -31,6 +33,17 @@
      (do
        ~@body)))
 
+(defn add-tag-info
+  "Add tag info to all files provided given the base path"
+  [base-path files]
+  (map (fn [f]
+         (let [name (:name f)
+               file-path (join-path base-path name)
+               ass (get-association file-path)]
+           (if (nil? ass)
+             f
+             (assoc f :tag ass)))) files))
+
 (defn random-html-color
   "Generate an awesome randome html color"
   []
@@ -41,7 +54,10 @@
   "Fetch files for the given path"
   [path]
   (try
-    (as-json (all-remote-files path))
+    (->> path
+         all-remote-files
+         (add-tag-info (join-path (config :base-path) path))
+         as-json)
     (catch Exception e (as-json-error (.getMessage e)))))
 
 (defn handle-apply-tag
@@ -53,9 +69,10 @@
           dest (get tag-obj "target")]
       (do-with-cond
         (or (nil? tag-obj) (nil? dest)) 400 "The specified tag is invalid"
-        (go (>! channel [:get target (get tag-obj "target")]))
-        (add-association tag target)
-        (as-json {:status 1})))))
+        (let [target-path (join-path (config :base-path) target)]
+          (go (>! channel [:get target-path (get tag-obj "target")]))
+          (add-association tag target-path)
+          (as-json {:status 1}))))))
 
 (defn handle-get-all-tags []
   (let [s (seq (get-all-tags))]

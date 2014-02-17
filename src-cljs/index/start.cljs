@@ -153,11 +153,20 @@
       (show-no-files-indicator))
     (let 
       [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
+       tags-color-map (reduce #(assoc %1 (.-name %2) (.-color %2)) {} @tag-store)
        linked (fn [n]
                 (if (= (.-type n) "dir")
                   (str "<a href='#' class='target-link'>"
                        (.-name n) "</a>")
                   (.-name n)))
+       tagged (fn [n]
+                (if (nil? (.-tag n))
+                  "<span class='list-item-tag'></span>"
+                  (do
+                    (let [tag-name (.-tag n)
+                          color (get tags-color-map tag-name)]
+                      (str "<span class='list-item-tag' style='color:" color ";font-weight:bold;font-style:italic;'>" tag-name "</span>")))))
+                  
        target (fn [n] (.-name n))
        to-row (fn [n] (str "<div class='list-item " (.-type n) "' target='" (target n) "'>"
                            "<div class='row'>"
@@ -172,7 +181,7 @@
                            "<div class='row'>"
                            "<div class='col-sm-8 list-item-tag-button'>"
                            (make-tag-button @tag-store)
-                           "<span class='list-item-tag'></span>"
+                           (tagged n)
                            "</div>"
                            "<div class='list-item-modified col-sm-4'>"
                            (format-date n)

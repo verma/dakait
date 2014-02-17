@@ -1,6 +1,7 @@
 (ns dakait.files
   (:use compojure.core
         dakait.config
+        [dakait.util :only (join-path)]
         [clojure.tools.logging :only (info error)])
   (:require 
     [clojure.java.io :as io]
@@ -36,10 +37,6 @@
   (when-not (ssh/connected? @ssh-session)
     (ssh/connect @ssh-session))
   @ssh-session)
-
-(defn join-path [& parts]
-  "Join the paths together"
-  (.getPath (apply io/file parts)))
 
 (defn all-files [path]
   (let [file-type (fn [e] (if (.isDirectory e) "dir" "file"))

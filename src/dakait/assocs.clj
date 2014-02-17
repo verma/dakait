@@ -47,7 +47,7 @@
        (spit config-file)))
 
 (defn- assoc-key
-  "Give a file in the remote file system, append the server info for a unique key"
+  "Given a file in the remote file system, append the server info for a unique key"
   [path]
   (str (config :username) "@" (config :sftp-host) ":" path))
 
@@ -62,4 +62,4 @@
   "Get an already set association, nil otherwise"
   [path]
   (let [key (assoc-key path)]
-    (get @assocs assoc-key)))
+    (get @assocs key)))
