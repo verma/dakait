@@ -282,9 +282,11 @@
                 parent (.closest jme ".list-item-tag-button")
                 parent-item (.closest jme ".list-item")
                 path (attr parent-item "target")
+                full-path (conj @current-path path)
+                str-path (apply str (interpose "/" full-path))
                 span (.find parent ".list-item-tag")]
             (add-class span "loading")
-            (tag-attach path tag
+            (tag-attach str-path tag
                         (fn [res]
                           (remove-class span "loading")
                           (when (true? res)

@@ -5,6 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.downloader :only (channel run)]
+        [dakait.assocs :only (load-associations add-association)]
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [compojure.handler :as handler]
@@ -53,6 +54,7 @@
       (do-with-cond
         (or (nil? tag-obj) (nil? dest)) 400 "The specified tag is invalid"
         (go (>! channel [:get target (get tag-obj "target")]))
+        (add-association tag target)
         (as-json {:status 1})))))
 
 (defn handle-get-all-tags []
@@ -93,6 +95,7 @@
 
 (load-and-validate)
 (load-tags (str (config :config-data-dir) "/tags.json"))
+(load-associations)
 (run)
 
 (def app

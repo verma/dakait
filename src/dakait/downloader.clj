@@ -4,11 +4,17 @@
 
 (ns dakait.downloader
   (:use dakait.config
+        [dakait.util :only (join-path)]
         [clojure.core.match :only (match)]
         [clojure.core.async :only (chan thread <!!)]
-        [clojure.tools.logging :only (info error)]))
+        [clojure.tools.logging :only (info error)])
+  (:require
+    [clojure.java.io :as io]
+    [clojure.data.json :as json]))
 
-(defn process-message
+;; Channel processing
+;;
+(defn- process-message
   "Process a recieved message"
   [msg]
   (match msg
@@ -27,4 +33,3 @@
 (defn run []
   "Run the downloader loop"
   (run-with-channel channel))
-
