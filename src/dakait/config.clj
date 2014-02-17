@@ -3,6 +3,7 @@
 
 (def defaults { :server-name "Server"
                 :sftp-port 22
+                :concurrency 4
                 :username (System/getProperty "user.name")
                 :base-path "." })
 
@@ -28,6 +29,7 @@
   (make-sure-required-exist)
   (let [props '(:config-data-dir 
                  :local-base-path
+                 :concurrency
                  :server-name :sftp-host
                  :sftp-port :username :base-path :private-key)]
     (println "Using configuration:")

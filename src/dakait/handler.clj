@@ -5,7 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.util :only (join-path)]
-        [dakait.downloader :only (channel run)]
+        [dakait.downloader :only (run start-download downloads-in-progress)]
         [dakait.assocs :only (load-associations add-association get-association)]
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
         [clojure.tools.logging :only (info error)]
@@ -69,8 +69,13 @@
           dest (get tag-obj "target")]
       (do-with-cond
         (or (nil? tag-obj) (nil? dest)) 400 "The specified tag is invalid"
-        (let [target-path (join-path (config :base-path) target)]
-          (go (>! channel [:get target-path (get tag-obj "target")]))
+        (let [target-path (join-path (config :base-path) target)
+              dest-path (join-path (config :local-base-path) (get tag-obj "target"))]
+          ;; start the download
+          ;;
+          (start-download target-path dest-path)
+          ;; setup appropriate association
+          ;;
           (add-association tag target-path)
           (as-json {:status 1}))))))
 
@@ -93,6 +98,11 @@
   (remove-tag name)
   (as-json {:success 1}))
 
+(defn handle-active-downloads
+  "Handle active downloads"
+  []
+  (as-json (map (fn [d] {:from (second d) :to (last d)}) (downloads-in-progress))))
+
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/tags" [] (tags-page))
@@ -105,6 +115,7 @@
           (handle-remove-tag name))
   (POST "/a/apply-tag" {params :params }
        (handle-apply-tag (:tag params) (:target params)))
+  (GET "/a/downloads" [] (handle-active-downloads))
   (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
