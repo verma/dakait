@@ -317,12 +317,49 @@
           (.preventDefault e)
           (push-sort-order n)))))
 
+(defn start-download-tracker
+  "Tracks the current status of downloads on the server"
+  []
+  (let [prep-table (fn [d]
+                     (->> d
+                          (map #(str "<tr><td>" (.-from %) "</td><td>" (.-to %) "</td></tr>"))
+                          (apply str)))
+        query-status (fn []
+                       (let [r (.get js/jQuery "/a/downloads")]
+                         (.success r (fn [d]
+                                       (log d)
+                                       (let [dc ($ "#download-count")
+                                             cd ($ "#current-downloads")
+                                             nd ($ ".nodownloads")]
+                                         (html dc (str (.-length d)))
+                                         (if (zero? (.-length d))
+                                           (do
+                                             (hide cd)
+                                             (show nd))
+                                           (do
+                                             (show cd)
+                                             (hide nd)
+                                             (html (.find cd "tbody") (prep-table d)))))))))]
+    (js/setInterval query-status 1000)))
+
+(defn attach-download-viewer
+  "Attach a handler to view current downloads"
+  []
+  (hide ($ "#current-downloads"))
+  (on ($ ".downloads") :click
+      (fn [e]
+        (.preventDefault e)
+        (log "Doing a modal")
+        (.modal ($ "#downloadsModal")))))
+
 (defn startup []
   (set-sort :name true)
   (hide-no-files-indicator)
   (hide-loading-indicator)
   (hide-error)
   (push-path ".")
+  (start-download-tracker)
+  (attach-download-viewer)
   (attach-click-handler)
   (attach-tagref-handler)
   (attach-sort-handlers)
