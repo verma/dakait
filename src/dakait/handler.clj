@@ -58,7 +58,10 @@
          all-remote-files
          (add-tag-info (join-path (config :base-path) path))
          as-json)
-    (catch Exception e (as-json-error (.getMessage e)))))
+    (catch Exception e 
+      (info "There was an error handling files request: " (.getMessage e))
+      (.printStackTrace e)
+      (as-json-error (.getMessage e)))))
 
 (defn handle-apply-tag
   "Handle application of tags onto files"

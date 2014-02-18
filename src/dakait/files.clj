@@ -25,7 +25,9 @@
 (defn- session []
   "Get the currently active session, if one doesn't exist, create a new one and make sure the
   session is connected"
-  (when (nil? @ssh-session)
+  (when (or (nil? @ssh-session)
+            (not (ssh/connected? @ssh-session)))
+    ;; Recreate our session if it doesn't exist or is not connected for some reason
     (let [host (config :sftp-host)
           user (config :username)
           port (config :sftp-port)
@@ -33,9 +35,10 @@
           session (ssh/session agent host {:port port
                                            :username user
                                            :strict-host-key-checking :no})]
+      (info "Connecting new session")
+      (info "Session parameters" host user port)
+      (ssh/connect session)
       (reset! ssh-session session)))
-  (when-not (ssh/connected? @ssh-session)
-    (ssh/connect @ssh-session))
   @ssh-session)
 
 (defn all-files [path]
