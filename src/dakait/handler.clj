@@ -5,7 +5,7 @@
         dakait.config
         [clojure.core.async :only(>! go)]
         [dakait.util :only (join-path)]
-        [dakait.downloader :only (run start-download downloads-in-progress)]
+        [dakait.downloader :only (run start-download downloads-in-progress downloads-pending)]
         [dakait.assocs :only (load-associations add-association get-association)]
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
         [clojure.tools.logging :only (info error)]
@@ -104,7 +104,18 @@
 (defn handle-active-downloads
   "Handle active downloads"
   []
-  (as-json (map (fn [d] {:from (second d) :to (last d)}) (downloads-in-progress))))
+  (as-json {:active (map (fn [d] {:from (second d) :to (last d)}) (downloads-in-progress))
+            :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
+
+(defn handle-active-downloads2 []
+  (as-json {:active [{:from "/some/really/long/path/and/then/the/longest/path/ever/seriously" :to "/some/really/really/really/really/long path"}
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}]
+            :pending [
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
+                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}]}))
 
 (defroutes app-routes
   (GET "/" [] (index-page))

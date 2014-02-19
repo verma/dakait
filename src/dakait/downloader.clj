@@ -78,6 +78,11 @@
   []
   @active-downloads)
 
+(defn downloads-pending
+  "Get all the pending downloads as a seq"
+  []
+  (seq @download-queue))
+
 (defn start-download
   "Start a download for the given file"
   [src dest]
