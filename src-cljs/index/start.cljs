@@ -317,29 +317,46 @@
           (.preventDefault e)
           (push-sort-order n)))))
 
+(defn update-downloads-tracker
+  "Update the modal for download tracking"
+  [data]
+  (log data)
+  (let [dc ($ "#download-count")
+        cd ($ ".current-downloads")
+        nd ($ ".nodownloads")
+        active (.-active data)
+        queued (.-pending data)
+        num-items (count active)
+        filename #(->> (clojure.string/split % #"/")
+                       (remove empty?)
+                       last)
+        downloads-as-seq (fn [d] 
+                           (map #(str
+                                   "<div class='download-item'>"
+                                   "<div class='title'>" (filename (.-from %)) "</div>"
+                                   "<div class='desc'>" (.-from %) " -> " (.-to %) "</div>"
+                                   "</div>") d))]
+
+    (html dc (str num-items))
+    (if (zero? num-items)
+      (do
+        (hide cd)
+        (show nd))
+      (do
+        (show cd)
+        (hide nd)
+        (html cd (str 
+                   "<div class='section-title'>Active</div>"
+                   (apply str (downloads-as-seq active))
+                   "<div class='section-title'>Pending</div>"
+                   (apply str (downloads-as-seq queued))))))))
+
 (defn start-download-tracker
   "Tracks the current status of downloads on the server"
   []
-  (let [prep-table (fn [d]
-                     (->> d
-                          (map #(str "<tr><td>" (.-from %) "</td><td>" (.-to %) "</td></tr>"))
-                          (apply str)))
-        query-status (fn []
+  (let [query-status (fn []
                        (let [r (.get js/jQuery "/a/downloads")]
-                         (.success r (fn [d]
-                                       (log d)
-                                       (let [dc ($ "#download-count")
-                                             cd ($ "#current-downloads")
-                                             nd ($ ".nodownloads")]
-                                         (html dc (str (.-length d)))
-                                         (if (zero? (.-length d))
-                                           (do
-                                             (hide cd)
-                                             (show nd))
-                                           (do
-                                             (show cd)
-                                             (hide nd)
-                                             (html (.find cd "tbody") (prep-table d)))))))))]
+                         (.success r update-downloads-tracker)))]
     (js/setInterval query-status 1000)))
 
 (defn attach-download-viewer

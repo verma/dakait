@@ -160,6 +160,29 @@
 			font-style: italic;
 		}
 
+		.current-downloads .section-title {
+			font-size: 25px;
+			font-weight: bold;
+			font-style: italic;
+			text-transform: uppercase;
+			color: #aaa;
+		}
+		.current-downloads .download-item {
+			margin-bottom: 5px;
+			padding-left: 10px;
+			padding-right: 10px;
+		}
+
+		.current-downloads .download-item .title {
+			font-size: 18px;
+			font-weight: bold;
+		}
+
+		.current-downloads .download-item .desc {
+			font-size: 12px;
+			color: #999;
+		}
+
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -208,17 +231,12 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-					<h4 class="modal-title">Active Downloads</h4>
+					<h4 class="modal-title">Downloads</h4>
 				</div>
 				<div class="modal-body">
 					<div class="nodownloads">No Active Downloads</div>
-					<table id="current-downloads" class="table">
-						<thead>
-							<tr><td>Source</td><td>Destination</td></tr>
-						</thead>
-						<tbody>
-						</tbody>
-					</table>
+					<div class="current-downloads">
+					</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
