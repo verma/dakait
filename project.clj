@@ -1,4 +1,4 @@
-(defproject dakait "0.0.1"
+(defproject dakait "0.0.2"
   :description "A tool to download files from your FTP/SFTP servers in an organized way."
   :url "https://github.com/verma/dakait"
   :dependencies [[org.clojure/clojure "1.5.1"]
