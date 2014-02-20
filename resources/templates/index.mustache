@@ -7,6 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
     <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700' rel='stylesheet' type='text/css'>
 
 	<title>{{server-name}} - Dakait File Listing</title>
 
@@ -14,6 +15,10 @@
     <link href="/css/bootstrap.css" rel="stylesheet">
 
 	<style>
+		body  {
+			font-family: 'Open Sans', sans-serif;
+		}
+
 		.name {
 			font-style: italic;
 			font-weight: bold;
@@ -33,7 +38,10 @@
 		}
 
 		.listing .list-item {
-			margin-bottom: 15px;
+			background-color: #efefef;
+			border: 1px solid white;
+			padding: 10px;
+			box-sizing: border-box;
 		}
 
 		.listing .title {
@@ -67,7 +75,6 @@
 			text-align: right;
 		}
 		.listing .list-item-tag {
-			padding-left: 10px;
 		}
 		.listing .list-item-tag-button {
 		}
@@ -183,6 +190,31 @@
 			color: #999;
 		}
 
+		.tag-button-container {
+			text-align: right;
+		}
+
+		.tag-button-container .tag-item-action {
+			width: 100%;
+			color: #999;
+		}
+
+		.all-tags a {
+			font-size: 20px;
+			font-style: italic;
+			width: 100%;
+			display: block;
+			line-height: 30px;
+			text-align: center;
+			padding: 10px;
+			color: black;
+		}
+
+		.all-tags a:hover {
+			text-decoration: none;
+			color: gray;
+		}
+
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -237,6 +269,23 @@
 					<div class="nodownloads">No Active Downloads</div>
 					<div class="current-downloads">
 					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="tagsModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-sm">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+					<h4 class="modal-title">Choose a Tag</h4>
+				</div>
+				<div class="modal-body">
+					<div class="all-tags"></div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

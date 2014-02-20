@@ -1,6 +1,6 @@
 (ns dakait.index
   (:use [clojure.string :only [join split]]
-        [jayq.core :only [$ html text ajax on bind hide show attr add-class remove-class]]
+        [jayq.core :only [$ html css text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
@@ -12,6 +12,8 @@
 (def current-order-is-ascending? (atom true)) ;; default order is ascending
 
 (def current-file-set (atom {}))              ;; current set of files
+
+(def tag-action-handler (atom (fn[])))        ;; What to call when a tag link is attached to
 
 ;; Sort map, each function takes one argument which indicates whether we intend
 ;; to do an ascending or a descending sort
@@ -56,12 +58,22 @@
     (.fail r
            #(done false))))
 
+(defn update-tags-modal
+  "Updates the tags modal to show our tags whenever its popped up"
+  [tags]
+  (let [tags-html (map #(str "<a href='#' class='tag-item' style='background-color:" (.-color %) "'>"
+                             (.-name %) "</a>") tags)
+        tag-str (apply str tags-html)]
+    (html ($ ".all-tags") tag-str)))
+
+
 (defn update-tags [done-cb]
   (log "querying tags")
   (let [r (.get js/jQuery "/a/tags")]
     (.done r
            (fn [data]
              (reset! tag-store data)
+             (update-tags-modal data)
              (done-cb)))
     (.fail r done-cb)))
 
@@ -170,6 +182,8 @@
        target (fn [n] (.-name n))
        to-row (fn [n] (str "<div class='list-item " (.-type n) "' target='" (target n) "'>"
                            "<div class='row'>"
+                           "<div class='col-sm-10'>"
+                           "<div class='row'>"
                            "<div class='col-sm-10 list-item-name'>"
                            (linked n)
                            "</div>"
@@ -179,13 +193,18 @@
                            "</div>"
                            "<div class='subitem'>"
                            "<div class='row'>"
-                           "<div class='col-sm-8 list-item-tag-button'>"
-                           (make-tag-button @tag-store)
+                           "<div class='col-sm-6 list-item-tag-button'>"
+                           ;;(make-tag-button @tag-store)
                            (tagged n)
                            "</div>"
-                           "<div class='list-item-modified col-sm-4'>"
+                           "<div class='list-item-modified col-sm-6'>"
                            (format-date n)
                            "</div>"
+                           "</div>"
+                           "</div>"
+                           "</div>"
+                           "<div class='col-sm-2 tag-button-container'>"
+                           "<button type='button' class='tag-item-action btn btn-default btn-lg'>Tag</button>"
                            "</div>"
                            "</div>"
                            "</div>"))
@@ -280,8 +299,48 @@
                 path (attr parent-item "target")]
             (push-path path))))))
 
+(defn attach-tagref-handler
+  "Handle application of tags"
+  []
+  (on ($ :.listing) :click :.tag-item-action
+      (fn [e]
+        (.preventDefault e)
+        (this-as me
+          (let [jme ($ me)
+                parent (.closest jme ".list-item")
+                path (attr parent "target")
+                full-path (conj @current-path path)
+                str-path (apply str (interpose "/" full-path))
+                span (.find parent ".list-item-tag")]
+            (reset! tag-action-handler
+                    (fn [tag color]
+                      (add-class span "loading")
+                      (tag-attach str-path tag
+                                  (fn [res]
+                                    (remove-class span "loading")
+                                    (when (true? res)
+                                      (attr span "style" 
+                                            (str "color:" color ";font-weight:bold;font-style:italic;"))
+                                      (html span tag))))))))
+        (.modal ($ "#tagsModal")))))
+
+(defn attach-tag-action-handler
+  "Handler for stuff when link on the tag modal is clicked"
+  []
+  (on ($ "#tagsModal") :click :a.tag-item
+      (fn [e]
+        (.preventDefault e)
+        (this-as me
+          (let [jme ($ me)
+                tag (text jme)
+                color (css jme "background-color")]
+            (log "Selected tag: " tag ", color: " color)
+            (@tag-action-handler tag color)))
+        (.modal ($ "#tagsModal") "hide"))))
+
+(comment
 (defn attach-tagref-handler []
-  (on ($ :.listing) :click :a.tagref
+  (on ($ :.listing) :click :a.tag-item
       (fn [e]
         (.preventDefault e)
         (this-as me
@@ -302,6 +361,7 @@
                              (attr span "style" 
                                    (str style ";font-weight:bold;font-style:italic;"))
                              (html span tag)))))))))
+  )
 
 (defn attach-shortcut-handler []
   (on ($ :.current-path) :click :a
@@ -366,7 +426,6 @@
   (on ($ ".downloads") :click
       (fn [e]
         (.preventDefault e)
-        (log "Doing a modal")
         (.modal ($ "#downloadsModal")))))
 
 (defn startup []
@@ -379,6 +438,7 @@
   (attach-download-viewer)
   (attach-click-handler)
   (attach-tagref-handler)
+  (attach-tag-action-handler)
   (attach-sort-handlers)
   (attach-shortcut-handler))
 

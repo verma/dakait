@@ -13,3 +13,5 @@ pom.xml.asc
 /resources/public/js/main.js
 .DS_Store
 /config.json
+/tags.json
+/assocs.json
