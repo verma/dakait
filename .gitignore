@@ -12,4 +12,4 @@ pom.xml.asc
 /resources/public/js/tags.js
 /resources/public/js/main.js
 .DS_Store
-/resources/config.clj
+/config.json

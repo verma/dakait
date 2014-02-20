@@ -1,0 +1,10 @@
+{ 
+  "config-data-dir": "/change/this/to/some/dir",
+  "sftp-host": "sftp.example.com",
+  "sftp-port": 22,
+  "username": "guest",
+  "private-key": "/path/to/private/key",
+  "base-path": "./some/dir",
+  "local-base-path": "/some/local/dir"
+  "concurrency": 4
+}

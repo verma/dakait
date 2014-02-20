@@ -5,10 +5,10 @@
                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
                  [org.clojure/core.match "0.2.1"]
                  [compojure "1.1.6"]
+                 [clj-ssh "0.5.7"]
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/data.json "0.2.4"]
                  [de.ubercode.clostache/clostache "1.3.1"]
-                 [sonian/carica "1.0.4" :exclusions [[cheshire]]]
                  [org.clojure/tools.logging "0.2.6"]
                  [me.raynes/conch "0.5.0"]
                  [jayq "2.5.0"]]
@@ -17,7 +17,6 @@
   :ring {:handler dakait.handler/app}
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [clj-ssh "0.5.7"]
                         [ring-mock "0.1.5"]]}}
   :hooks [leiningen.cljsbuild]
 

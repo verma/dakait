@@ -27,14 +27,14 @@
 
 (def assocs (atom {}))
 
-(def config-file (join-path (config :config-data-dir) "assocs.json"))
+(def assocs-file (join-path (config :config-data-dir) "assocs.json"))
 
 (defn load-associations
   "Load associations from our configuration file"
   []
-  (info "Associations file: " config-file)
-  (when (.exists (io/file config-file))
-    (->> config-file
+  (info "Associations file: " assocs-file)
+  (when (.exists (io/file assocs-file))
+    (->> assocs-file
          slurp
          json/read-str
          (reset! assocs))))
@@ -44,7 +44,7 @@
   [assocs]
   (->> assocs
        json/write-str
-       (spit config-file)))
+       (spit assocs-file)))
 
 (defn- assoc-key
   "Given a file in the remote file system, append the server info for a unique key"
