@@ -11,6 +11,7 @@
                  [de.ubercode.clostache/clostache "1.3.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [me.raynes/conch "0.5.0"]
+                 [crate "0.2.5"]
                  [jayq "2.5.0"]]
   :plugins [[lein-ring "0.8.10"]
             [lein-cljsbuild "1.0.1"]]
