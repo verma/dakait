@@ -1,7 +1,9 @@
 (ns dakait.index
-  (:use [clojure.string :only [join split]]
-        [jayq.core :only [$ html css text ajax on bind hide show attr add-class remove-class]]
+  (:use
+        [clojure.string :only [join split]]
+        [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
+  (:require [crate.core :as crate])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
 (def current-path (atom []))
@@ -138,26 +140,6 @@
       (< diffInHours 168) (str (quot diffInHours 24) " days ago")
       :else (.toDateString (js/Date. dt)))))
 
-(defn make-tag-button
-  "Makes required html to build tag dropdown"
-  [tags]
-  (let [tag-items (map
-                    #(str "<li>"
-                          "<a class='tagref' style='color:" (.-color %) "' href='#'>"
-                          (.-name %)
-                          "</a>"
-                          "</li>")
-                    tags)]
-  (str
-    "<div class='btn-group'>"
-    "<button type='button' class='btn btn-default btn-xs dropdown-toggle' data-toggle='dropdown'>"
-    "<span class='caret'></span>"
-    "</button>"
-    "<ul class='dropdown-menu' role='menu'>"
-    (apply str tag-items)
-    "</ul>"
-    "</div>")))
-
 (defn show-files [files]
   (if (= (count files) 0)
     (do
@@ -168,48 +150,37 @@
        tags-color-map (reduce #(assoc %1 (.-name %2) (.-color %2)) {} @tag-store)
        linked (fn [n]
                 (if (= (.-type n) "dir")
-                  (str "<a href='#' class='target-link'>"
-                       (.-name n) "</a>")
+                  [:a.target-link {:href "#"} (.-name n)]
                   (.-name n)))
        tagged (fn [n]
                 (if (nil? (.-tag n))
-                  "<span class='list-item-tag'></span>"
+                  [:span.list-item-tag]
                   (do
                     (let [tag-name (.-tag n)
                           color (get tags-color-map tag-name)]
-                      (str "<span class='list-item-tag' style='color:" color ";font-weight:bold;font-style:italic;'>" tag-name "</span>")))))
-                  
-       target (fn [n] (.-name n))
-       to-row (fn [n] (str "<div class='list-item " (.-type n) "' target='" (target n) "'>"
-                           "<div class='row'>"
-                           "<div class='col-sm-10'>"
-                           "<div class='row'>"
-                           "<div class='col-sm-10 list-item-name'>"
-                           (linked n)
-                           "</div>"
-                           "<div class='list-item-size col-sm-2'>"
-                           (file-size n)
-                           "</div>"
-                           "</div>"
-                           "<div class='subitem'>"
-                           "<div class='row'>"
-                           "<div class='col-sm-6 list-item-tag-button'>"
-                           ;;(make-tag-button @tag-store)
-                           (tagged n)
-                           "</div>"
-                           "<div class='list-item-modified col-sm-6'>"
-                           (format-date n)
-                           "</div>"
-                           "</div>"
-                           "</div>"
-                           "</div>"
-                           "<div class='col-sm-2 tag-button-container'>"
-                           "<button type='button' class='tag-item-action btn btn-default btn-lg'>Tag</button>"
-                           "</div>"
-                           "</div>"
-                           "</div>"))
-       html-content (apply str (map to-row files))]
-      (html ($ ".listing") html-content))))
+                      [:span.list-item-tag {:style (str "color:" color ";")}
+                       tag-name]))))
+       target (fn [n] (-> (.-name n)
+                          (clojure.string/replace "'" "\\'")
+                          (clojure.string/replace "\"" "\\\"")))
+       to-row (fn [n] (crate/html 
+                       [:div {:class (str "list-item " (.-type n)) :target (.-name n)}
+                        [:div.row {}
+                         [:div.col-sm-10 {}
+                          [:div.row {}
+                           [:div {:class "col-sm-10 list-item-name"} (linked n)]
+                           [:div {:class "col-sm-2 list-item-size"} (file-size n)]
+                           ]
+                          [:div.subitem {}
+                           [:div.row {}
+                            [:div {:class "col-sm-6 list-item-tag-button"} (tagged n)]
+                            [:div {:class "col-sm-6 list-item-modified"} (format-date n)]]]]
+                         [:div {:class "col-sm-2 tag-button-container"}
+                          [:button {:class "btn btn-default btn-lg tag-item-action"} "Tag"]]]]))]
+
+      (html ($ ".listing") "")
+      (doseq [f files]
+        (append ($ ".listing") (to-row f))))))
 
 (defn make-path [elems]
   (join "/" elems))
@@ -320,7 +291,7 @@
                                     (remove-class span "loading")
                                     (when (true? res)
                                       (attr span "style" 
-                                            (str "color:" color ";font-weight:bold;font-style:italic;"))
+                                            (str "color:" color ";"))
                                       (html span tag))))))))
         (.modal ($ "#tagsModal")))))
 
@@ -337,31 +308,6 @@
             (log "Selected tag: " tag ", color: " color)
             (@tag-action-handler tag color)))
         (.modal ($ "#tagsModal") "hide"))))
-
-(comment
-(defn attach-tagref-handler []
-  (on ($ :.listing) :click :a.tag-item
-      (fn [e]
-        (.preventDefault e)
-        (this-as me
-          (let [jme ($ me)
-                tag (text jme)
-                style (attr jme "style")
-                parent (.closest jme ".list-item-tag-button")
-                parent-item (.closest jme ".list-item")
-                path (attr parent-item "target")
-                full-path (conj @current-path path)
-                str-path (apply str (interpose "/" full-path))
-                span (.find parent ".list-item-tag")]
-            (add-class span "loading")
-            (tag-attach str-path tag
-                        (fn [res]
-                          (remove-class span "loading")
-                          (when (true? res)
-                             (attr span "style" 
-                                   (str style ";font-weight:bold;font-style:italic;"))
-                             (html span tag)))))))))
-  )
 
 (defn attach-shortcut-handler []
   (on ($ :.current-path) :click :a
