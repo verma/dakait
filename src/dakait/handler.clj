@@ -104,7 +104,7 @@
 (defn handle-active-downloads
   "Handle active downloads"
   []
-  (as-json {:active (map (fn [d] {:from (second d) :to (last d)}) (downloads-in-progress))
+  (as-json {:active (downloads-in-progress)
             :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
 
 (defn handle-active-downloads2 []

@@ -337,12 +337,22 @@
                        (remove empty?)
                        last)
         downloads-as-seq (fn [d] 
-                           (map #(str
-                                   "<div class='download-item'>"
-                                   "<div class='title'>" (filename (.-from %)) "</div>"
-                                   "<div class='desc'>" (.-from %) " -> " (.-to %) "</div>"
-                                   "</div>") d))]
-
+                           (map (fn [e]
+                                 (let [ds (aget e "download-status")
+                                       filen (filename (.-from e))
+                                       from (.-from e)
+                                       to (.-to e)]
+                                   (crate/html
+                                     [:div.download-item {}
+                                      [:div.title {} filen]
+                                      (if (nil? ds)
+                                        [:div.status {} "Waiting..."]
+                                        [:div.status {}
+                                         [:div.row {}
+                                          [:div.col-sm-2 {} (aget ds "percent-complete")]
+                                          [:div.col-sm-2 {} (.-downloaded ds)]
+                                          [:div.col-sm-2 {} (.-rate ds)]]])
+                                      [:div.desc {} (str from " -> " to)]]))) d))]
     (html dc (str num-items))
     (if (zero? num-items)
       (do
@@ -351,11 +361,13 @@
       (do
         (show cd)
         (hide nd)
-        (html cd (str 
-                   "<div class='section-title'>Active</div>"
-                   (apply str (downloads-as-seq active))
-                   "<div class='section-title'>Pending</div>"
-                   (apply str (downloads-as-seq queued))))))))
+        (html cd "")
+        (append cd (crate/html [:div.section-title {} "Active"]))
+        (doseq [e (downloads-as-seq active)]
+          (append cd e))
+        (append cd (crate/html [:div.section-title {} "Pending"]))
+        (doseq [e (downloads-as-seq pending)]
+          (append cd e))))))
 
 (defn start-download-tracker
   "Tracks the current status of downloads on the server"

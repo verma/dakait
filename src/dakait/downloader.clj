@@ -15,6 +15,7 @@
 
 (def active-downloads (atom []))
 (def download-queue (atom (clojure.lang.PersistentQueue/EMPTY)))
+(def download-states (atom {})) ;; directly modified by download threads
 
 ;; Download management
 ;;
@@ -22,26 +23,44 @@
   "Download the given file or directory to the given directory"
   [src dest]
   (.mkdirs (io/file dest)) ;; Make sure the destination directory exists
-  (let [args (list "scp"
-                "-i" (config :private-key) ;; identity file
-                "-B" ;; batch run
-                "-r" ;; recursive if directory
-                "-P" (config :sftp-port) ;; the port to use
-                (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
-                dest)] ;; destination)
+  (let [tmp-file (.getAbsolutePath (java.io.File/createTempFile "downloader" "txt"))
+        args (list 
+               "script" "-t" "0" "-q" tmp-file
+               "scp"
+               "-i" (config :private-key) ;; identity file
+               "-B" ;; batch run
+               "-r" ;; recursive if directory
+               "-P" (config :sftp-port) ;; the port to use
+               (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
+               dest)
+        update-to-map (fn [s]
+                        (when-not (empty? s)
+                          (let [parts (remove empty? (clojure.string/split s #"\s"))]
+                            (when (= (count parts) 6)
+                              {:filename (first parts)
+                               :percent-complete (second parts)
+                               :downloaded (nth parts 2)
+                               :rate (nth parts 3)
+                               :eta (nth parts 4)}))))]
     [(future (do
                (try
                  (info "Starting process: " args)
-                 (let [p (apply sh/proc (map str args))
-                       code (sh/exit-code p)]
+                 (let [p (apply sh/proc (map str args))]
+                   (with-open [rdr (io/reader (:out p))]
+                     (doseq [line (line-seq rdr)]
+                       (let [state-map (update-to-map line)]
+                         (info "source key: " src)
+                         (info "download state map: " state-map)
+                         (reset! download-states 
+                                 (assoc @download-states src state-map)))))
                    (info "Process ended")
-                   (info "stdout:" (sh/stream-to-string p :out))
-                   (info "stderr:" (sh/stream-to-string p :err))
-                   code)
+                   (sh/exit-code p))
                  (catch Exception e
                    (info "Download process failed: " (.getMessage e))
                    (.printStackTrace e)
-                   0)))) src dest]))
+                   0)
+                 (finally
+                   (io/delete-file tmp-file true))))) src dest]))
 
 (defn- download-manager
   "Runs in an end-less loop looking for new down load requests and dispatching them"
@@ -76,7 +95,10 @@
 (defn downloads-in-progress
   "Gets all active downloads"
   []
-  @active-downloads)
+  (map (fn [[fut src dest]]
+         {:from src
+          :to dest
+          :download-status (get @download-states src)}) @active-downloads))
 
 (defn downloads-pending
   "Get all the pending downloads as a seq"
