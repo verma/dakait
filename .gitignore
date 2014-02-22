@@ -12,6 +12,7 @@ pom.xml.asc
 /resources/public/js/tags.js
 /resources/public/js/main.js
 .DS_Store
+.vagrant
 /config.json
 /tags.json
 /assocs.json

@@ -17,6 +17,27 @@
 (def download-queue (atom (clojure.lang.PersistentQueue/EMPTY)))
 (def download-states (atom {})) ;; directly modified by download threads
 
+(defn- make-download-command
+  "Makes operating system specific script + scp command"
+  [src dest tmp-file]
+  (let [os (clojure.string/lower-case (System/getProperty "os.name"))
+        scp-command (list "scp"
+                          "-i" (config :private-key) ;; identity file
+                          "-B" ;; batch run
+                          "-r" ;; recursive if directory
+                          "-o" "StrictHostKeyChecking=no"
+                          "-P" (config :sftp-port) ;; the port to use
+                          (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
+                          dest)]
+    (cond
+      (= os "mac os x") (concat (list "script" "-t" "0" "-q" tmp-file)
+                                scp-command)
+      (= os "linux") (list
+                       "script" "-f" "-e" "-q"
+                       "-c" (apply str (interpose " " scp-command))
+                       tmp-file))))
+      
+
 ;; Download management
 ;;
 (defn- download
@@ -24,15 +45,7 @@
   [src dest]
   (.mkdirs (io/file dest)) ;; Make sure the destination directory exists
   (let [tmp-file (.getAbsolutePath (java.io.File/createTempFile "downloader" "txt"))
-        args (list 
-               "script" "-t" "0" "-q" tmp-file
-               "scp"
-               "-i" (config :private-key) ;; identity file
-               "-B" ;; batch run
-               "-r" ;; recursive if directory
-               "-P" (config :sftp-port) ;; the port to use
-               (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
-               dest)
+        args (make-download-command src dest tmp-file)
         update-to-map (fn [s]
                         (when-not (empty? s)
                           (let [parts (remove empty? (clojure.string/split s #"\s"))]
