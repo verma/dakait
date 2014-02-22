@@ -8,9 +8,9 @@ You create tags (pretty looking names for local directories) and tag your remote
 
 Current Release
 ---
-Current release version is `0.0.4`.  It will do what its supposed to do, but it has a long way to go.
+Current release version is `0.0.5`.  It will do what its supposed to do, but it has a long way to go.
 
-[Download Now](https://github.com/verma/dakait/releases/download/0.0.4/dakait-0.0.4-standalone.jar)
+[Download Now](https://github.com/verma/dakait/releases/download/0.0.5/dakait-0.0.5-standalone.jar)
 
 How to run
 ---
@@ -19,7 +19,7 @@ You need a configuration file to run Dakait.  Modify and rename `config.example.
 
 Once you have the jar file, make sure your server has a recent enough version of java.  You can start the server by running the following command
 
-    java -jar dakait-0.0.4-standalone.jar
+    java -jar dakait-0.0.5-standalone.jar
     
 This will start a server and bind to port `3000`.  Now point your browser to `http://server-address:3000/`
 
