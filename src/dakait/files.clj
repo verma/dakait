@@ -25,8 +25,7 @@
 (defn- session []
   "Get the currently active session, if one doesn't exist, create a new one and make sure the
   session is connected"
-  (when (or (nil? @ssh-session)
-            (not (ssh/connected? @ssh-session)))
+  (when (nil? @ssh-session)
     ;; Recreate our session if it doesn't exist or is not connected for some reason
     (let [host (config :sftp-host)
           user (config :username)
@@ -35,10 +34,15 @@
           session (ssh/session agent host {:port port
                                            :username user
                                            :strict-host-key-checking :no})]
-      (info "Connecting new session")
-      (info "Session parameters" host user port)
-      (ssh/connect session)
+      (info "New session created with param: " host user port)
       (reset! ssh-session session)))
+  ;; seems to me the ssh/connected? seems to return true and then the channel creation fails with "Session not connected"
+  ;; Explictely call connect every time the session is requested.
+  (try
+    (info "Force connecting session")
+    (ssh/connect @ssh-session)
+    (catch Exception e
+      "Call ot session connect failed with: " (.getMessage e)))
   @ssh-session)
 
 (defn all-files [path]
