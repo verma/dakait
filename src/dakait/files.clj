@@ -1,6 +1,7 @@
 (ns dakait.files
   (:use compojure.core
         dakait.config
+        [clojure.core.async :only (thread)]
         [dakait.util :only (join-path)]
         [clojure.tools.logging :only (info error)])
   (:require 
@@ -22,6 +23,23 @@
       (reset! ssh-agent agent)))
   @ssh-agent)
 
+(def session-invalidator (atom nil))
+(defn- reset-session-invalidate
+  "This function acts as a hit on the session being active, every time this function is called
+  session invalidation is reset, when the reset invalidation expires the ssh session is
+  invalidated and set to nil"
+  []
+  (when-not (nil? @session-invalidator)
+    (future-cancel @session-invalidator))
+  (reset! session-invalidator
+          (future
+            (Thread/sleep 120000)
+            (info "Invalidating session")
+            (let [s @ssh-session]
+              (reset! ssh-session nil)
+              (reset! session-invalidator nil)
+              (ssh/disconnect s)))))
+
 (defn- session []
   "Get the currently active session, if one doesn't exist, create a new one and make sure the
   session is connected"
@@ -35,14 +53,11 @@
                                            :username user
                                            :strict-host-key-checking :no})]
       (info "New session created with param: " host user port)
-      (reset! ssh-session session)))
+      (reset! ssh-session session)
+      (ssh/connect session)))
   ;; seems to me the ssh/connected? seems to return true and then the channel creation fails with "Session not connected"
   ;; Explictely call connect every time the session is requested.
-  (try
-    (info "Force connecting session")
-    (ssh/connect @ssh-session)
-    (catch Exception e
-      "Call ot session connect failed with: " (.getMessage e)))
+  (reset-session-invalidate)
   @ssh-session)
 
 (defn all-files [path]
@@ -54,11 +69,12 @@
                           :type (file-type e)
                           :size (file-size e)}))))))
 
-(defn list-remote-files [path]
+(defn list-remote-files
   "Get the list of all files at the given path"
+  [path]
   (let [this-channel (ssh/ssh-sftp (session))]
     (ssh/with-channel-connection this-channel
-      (when (not (nil? path))
+      (when-not (nil? path)
         (ssh/sftp this-channel {} :cd path))
       (ssh/sftp this-channel {} :ls))))
 
