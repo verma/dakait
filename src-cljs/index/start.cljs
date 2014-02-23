@@ -351,7 +351,8 @@
                                          [:div.row {}
                                           [:div.col-sm-2 {} (aget ds "percent-complete")]
                                           [:div.col-sm-2 {} (.-downloaded ds)]
-                                          [:div.col-sm-2 {} (.-rate ds)]]])
+                                          [:div.col-sm-2 {} (.-rate ds)]
+                                          [:div.col-sm-2 {} (.-eta ds)]]])
                                       [:div.desc {} (str from " -> " to)]]))) d))]
     (html dc (str num-items))
     (if (zero? num-items)

@@ -17,10 +17,22 @@
 (def download-queue (atom (clojure.lang.PersistentQueue/EMPTY)))
 (def download-states (atom {})) ;; directly modified by download threads
 
+(defn- osize-dest
+  "Operating system specific destination formatting, os x accepts the scp commands as a list
+  whereas linux accepts it as a single argument, we need to quote dest for linux in case there are
+  spaces in the destination"
+  [dest]
+  (let [os (clojure.string/lower-case (System/getProperty "os.name"))]
+    (cond
+      (= os "mac os x") dest
+      (= os "linux") (str "\"" dest "\"")
+      :else (throw (Exception. "scp handling is not implemented for this os")))))
+
 (defn- make-download-command
   "Makes operating system specific script + scp command"
   [src dest tmp-file]
   (let [os (clojure.string/lower-case (System/getProperty "os.name"))
+        os-dest (osize-dest dest)
         scp-command (list "scp"
                           "-i" (config :private-key) ;; identity file
                           "-B" ;; batch run
@@ -28,14 +40,15 @@
                           "-o" "StrictHostKeyChecking=no"
                           "-P" (config :sftp-port) ;; the port to use
                           (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
-                          dest)]
+                          os-dest)]
     (cond
       (= os "mac os x") (concat (list "script" "-t" "0" "-q" tmp-file)
                                 scp-command)
       (= os "linux") (list
                        "script" "-f" "-e" "-q"
                        "-c" (apply str (interpose " " scp-command))
-                       tmp-file))))
+                       tmp-file)
+      :else (throw (Exception. "scp handling is not implemented for this os")))))
       
 
 ;; Download management
