@@ -17,30 +17,44 @@
 (def download-queue (atom (clojure.lang.PersistentQueue/EMPTY)))
 (def download-states (atom {})) ;; directly modified by download threads
 
-(defn- osize-dest
-  "Operating system specific destination formatting, os x accepts the scp commands as a list
+(defn- escape-for-commandline
+  "Replace all spaces in string with command line escaped spaces (with slash before every space)
+  based on an answer here: http://stackoverflow.com/a/20053121/73544 best thing to do is to escape
+  all the things"
+  [s]
+  (->> s
+    (map #(if (Character/isLetterOrDigit %)
+             (str %)
+             (str "\\" %)))
+    (apply str)))
+
+(defn- os-proof
+  "Operating system specific filename formatting, os x accepts the scp commands as a list
   whereas linux accepts it as a single argument, we need to quote dest for linux in case there are
-  spaces in the destination"
-  [dest]
+  spaces in the destination since its passed to the shell as it is"
+  [s]
   (let [os (clojure.string/lower-case (System/getProperty "os.name"))]
     (cond
-      (= os "mac os x") dest
-      (= os "linux") (str "\"" dest "\"")
+      (= os "mac os x") s
+      (= os "linux") (escape-for-commandline s)
       :else (throw (Exception. "scp handling is not implemented for this os")))))
+
 
 (defn- make-download-command
   "Makes operating system specific script + scp command"
   [src dest tmp-file]
   (let [os (clojure.string/lower-case (System/getProperty "os.name"))
-        os-dest (osize-dest dest)
+        os-src (os-proof src)
+        os-dest (os-proof dest)
         scp-command (list "scp"
                           "-i" (config :private-key) ;; identity file
                           "-B" ;; batch run
                           "-r" ;; recursive if directory
                           "-o" "StrictHostKeyChecking=no"
                           "-P" (config :sftp-port) ;; the port to use
-                          (str (config :username) "@" (config :sftp-host) ":\"" src "\"") ;; source
+                          (str (config :username) "@" (config :sftp-host) ":\"" os-src "\"") ;; source
                           os-dest)]
+    (info "making download command, src: " os-src ", dest: " os-dest)
     (cond
       (= os "mac os x") (concat (list "script" "-t" "0" "-q" tmp-file)
                                 scp-command)
@@ -61,19 +75,23 @@
         args (make-download-command src dest tmp-file)
         update-to-map (fn [s]
                         (when-not (empty? s)
-                          (let [parts (remove empty? (clojure.string/split s #"\s"))]
-                            (when (= (count parts) 6)
-                              {:filename (first parts)
-                               :percent-complete (second parts)
-                               :downloaded (nth parts 2)
-                               :rate (nth parts 3)
-                               :eta (nth parts 4)}))))]
+                          (let [parts (reverse (remove empty? (clojure.string/split s #"\s")))]
+                            (when (= (first parts) "ETA")
+                              (let [[eta rate dl pc & junk] (rest parts)]
+                                    {:percent-complete pc
+                                     :downloaded dl
+                                     :rate rate
+                                     :eta eta})))))]
+                              ;; scp command shows ETA as the last thing when downloading, but doesn't when done.
+                              ;; make sure to drop the first element when its ETA, we reverese the components to make
+                              ;; it easier on us to destruct them later
     [(future (do
                (try
                  (info "Starting process: " args)
                  (let [p (apply sh/proc (map str args))]
                    (with-open [rdr (io/reader (:out p))]
                      (doseq [line (line-seq rdr)]
+                       (info "stdout: " line)
                        (let [state-map (update-to-map line)]
                          (info "source key: " src)
                          (info "download state map: " state-map)
