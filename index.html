@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Dakait by verma</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Dakait</h1>
+          <h2>A tool to download files from your FTP/SFTP servers in an organized way.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/verma/dakait/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/verma/dakait/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/verma/dakait" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a name="dakait" class="anchor" href="#dakait"><span class="octicon octicon-link"></span></a>Dakait</h1>
+
+<p>Download files from remote servers and effortlessly manage them.</p>
+
+<p>You have large amounts of large files on a remote server (e.g. a seedbox) and you want to download and stage them nicely.  Dakait lets you do that.</p>
+
+<p>You create tags (pretty looking names for local directories) and tag your remote file on a web-interface.  Dakait takes care of downloading and staging them for you.</p>
+
+<h2>
+<a name="current-release" class="anchor" href="#current-release"><span class="octicon octicon-link"></span></a>Current Release</h2>
+
+<p>Current release version is <code>0.0.6</code>.  It will do what its supposed to do, but it has a long way to go.</p>
+
+<p><a href="https://github.com/verma/dakait/releases/download/0.0.6/dakait-0.0.6-standalone.jar">Download Now</a></p>
+
+<h2>
+<a name="how-to-run" class="anchor" href="#how-to-run"><span class="octicon octicon-link"></span></a>How to run</h2>
+
+<p>You need a configuration file to run Dakait.  Modify and rename <code>config.example.json</code> to <code>config.json</code>. This file must reside in the working directory (path where you run this program from).</p>
+
+<p>Once you have the jar file, make sure your server has a recent enough version of java.  You can start the server by running the following command</p>
+
+<pre><code>java -jar dakait-0.0.6-standalone.jar
+</code></pre>
+
+<p>This will start a server and bind to port <code>3000</code>.  Now point your browser to <code>http://server-address:3000/</code></p>
+
+<h2>
+<a name="what-are-tags" class="anchor" href="#what-are-tags"><span class="octicon octicon-link"></span></a>What are tags?</h2>
+
+<p>Tags are an easy way of classifying a file.  </p>
+
+<p>Lets say you create a tag called <code>Ubuntu Image</code> and assign it a target <code>images/ubuntu</code>.  While browsing the remote server through Dakait's web-interface, whenever you tag a file or a directory with <code>Ubuntu Image</code> Dakait will start downlaoding the tagged file/directory to your <code>&lt;local-base-path&gt;/images/ubuntu</code> Directory.  Note that reapplying a tag just initiates a new download, this will change in a future release when Dakait becomes smart enough to detect this.</p>
+
+<h2>
+<a name="why" class="anchor" href="#why"><span class="octicon octicon-link"></span></a>Why?</h2>
+
+<p>I really wanted to learn clojure and really really needed a tool like this.</p>
+
+<h2>
+<a name="configuration-options" class="anchor" href="#configuration-options"><span class="octicon octicon-link"></span></a>Configuration Options</h2>
+
+<p>Dakait understands the following options</p>
+
+<h3>
+<a name="config-data-dir-required" class="anchor" href="#config-data-dir-required"><span class="octicon octicon-link"></span></a>config-data-dir (required)</h3>
+
+<p>Local directory to cache running state.  Tags and tag associations are saved in this directory.</p>
+
+<h3>
+<a name="sftp-host-required" class="anchor" href="#sftp-host-required"><span class="octicon octicon-link"></span></a>sftp-host (required)</h3>
+
+<p>The remote SFTP host.  At this time Dakait support <code>sftp</code> protocol only.</p>
+
+<h3>
+<a name="private-key-required" class="anchor" href="#private-key-required"><span class="octicon octicon-link"></span></a>private-key (required)</h3>
+
+<p>The private key to use to login to the remote server.</p>
+
+<h3>
+<a name="local-base-path-required" class="anchor" href="#local-base-path-required"><span class="octicon octicon-link"></span></a>local-base-path (required)</h3>
+
+<p>Directory to save downloaded files to.  The tag target directories will be created under this directory.</p>
+
+<h3>
+<a name="sftp-port-optional" class="anchor" href="#sftp-port-optional"><span class="octicon octicon-link"></span></a>sftp-port (optional)</h3>
+
+<p>SSH port on remote server</p>
+
+<h3>
+<a name="username-optional" class="anchor" href="#username-optional"><span class="octicon octicon-link"></span></a>username (optional)</h3>
+
+<p>SSH username to use, defaults to the username of the user running the program.</p>
+
+<h3>
+<a name="base-path-optional" class="anchor" href="#base-path-optional"><span class="octicon octicon-link"></span></a>base-path (optional)</h3>
+
+<p>The base path to <code>cd</code> into on the remote machine, your session starts in this directory, and you cannot traverse back.</p>
+
+<h3>
+<a name="concurrency-optional" class="anchor" href="#concurrency-optional"><span class="octicon octicon-link"></span></a>concurrency (optional)</h3>
+
+<p>Number of simultaneous downloads.  Defaults to <code>4</code>.</p>
+        </section>
+
+        <footer>
+          Dakait is maintained by <a href="https://github.com/verma">verma</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+                  <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-48307976-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+      </div>
+    </div>
+  </body>
+</html>
