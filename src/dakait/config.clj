@@ -13,10 +13,7 @@
 
 (defn config [k]
   "Get the associated configuration value, if the config doesn't exist, return the default"
-  (let [value (k @loaded-config)]
-    (if (nil? value)
-      (k defaults)
-      value)))
+  (get @loaded-config k (k defaults)))
 
 (defn- make-sure-required-exist []
   "Makes sure that required properties exist"
