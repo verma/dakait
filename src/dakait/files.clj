@@ -29,16 +29,18 @@
   session invalidation is reset, when the reset invalidation expires the ssh session is
   invalidated and set to nil"
   []
-  (when-not (nil? @session-invalidator)
-    (future-cancel @session-invalidator))
-  (reset! session-invalidator
-          (future
-            (Thread/sleep 120000)
-            (info "Invalidating session")
-            (let [s @ssh-session]
-              (reset! ssh-session nil)
-              (reset! session-invalidator nil)
-              (ssh/disconnect s)))))
+  (swap! session-invalidator
+         (fn [si]
+           (when-not (nil? si)
+             (future-cancel si))
+           (future
+             (Thread/sleep 120000)
+             (info "Invalidating session")
+             (swap! ssh-session (fn [s]
+                                  (ssh/disconnect s)
+                                  nil))
+             (reset! session-invalidator nil)))))
+
 
 (defn- session []
   "Get the currently active session, if one doesn't exist, create a new one and make sure the

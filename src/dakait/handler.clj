@@ -107,16 +107,6 @@
   (as-json {:active (downloads-in-progress)
             :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
 
-(defn handle-active-downloads2 []
-  (as-json {:active [{:from "/some/really/long/path/and/then/the/longest/path/ever/seriously" :to "/some/really/really/really/really/long path"}
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}]
-            :pending [
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}
-                     {:from "/some/really/long/path" :to "/some/really/really/really/really/long path"}]}))
-
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/tags" [] (tags-page))

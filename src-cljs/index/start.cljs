@@ -331,7 +331,7 @@
         cd ($ ".current-downloads")
         nd ($ ".nodownloads")
         active (.-active data)
-        queued (.-pending data)
+        pending (.-pending data)
         num-items (count active)
         filename #(->> (clojure.string/split % #"/")
                        (remove empty?)

@@ -95,8 +95,7 @@
                        (let [state-map (update-to-map line)]
                          (info "source key: " src)
                          (info "download state map: " state-map)
-                         (reset! download-states 
-                                 (assoc @download-states src state-map)))))
+                         (swap! download-states assoc src state-map))))
                    (info "Process ended")
                    (sh/exit-code p))
                  (catch Exception e
@@ -153,7 +152,7 @@
   "Start a download for the given file"
   [src dest]
   (info "Queuing download, source: " src ", destination: " dest)
-  (reset! download-queue (conj @download-queue [src dest])))
+  (swap! download-queue conj [src dest]))
 
 (defn run
   "Run the downloader loop"
