@@ -125,10 +125,14 @@
   (route/not-found "Not Found"))
 
 
-(load-and-validate)
-(load-tags (str (config :config-data-dir) "/tags.json"))
-(load-associations)
-(run)
+(try
+  (load-and-validate)
+  (load-tags (str (config :config-data-dir) "/tags.json"))
+  (load-associations)
+  (run)
+  (catch Exception e
+    (println "Program initialization failed: " (.getMessage e))
+    (System/exit 1)))
 
 (def app
   (-> (handler/site app-routes)
