@@ -11,6 +11,7 @@
                  [de.ubercode.clostache/clostache "1.3.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [me.raynes/conch "0.5.0"]
+                 [om "0.5.1"]
                  [crate "0.2.5"]
                  [jayq "2.5.0"]]
   :plugins [[lein-ring "0.8.10"]
@@ -26,10 +27,12 @@
              {:source-paths ["src-cljs/index"] 
               :compiler {:output-to "resources/public/js/index.js"
                          :optimizations :whitespace
+                         :source-map true
                          :pretty-print true}}
              
              {:source-paths ["src-cljs/tags"] 
               :compiler {:output-to "resources/public/js/tags.js"
                          :optimizations :whitespace
+                         :source-map true
                          :pretty-print true}}
              ]})
