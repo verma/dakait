@@ -1,5 +1,8 @@
 Dakait
 =========
+
+Screenshots and more information is available here: http://udayv.com/dakait/
+
 Download files from remote servers and effortlessly manage them.
 
 You have large amounts of large files on a remote server (e.g. a seedbox) and you want to download and stage them nicely.  Dakait lets you do that.
