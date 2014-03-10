@@ -3,6 +3,7 @@
         dakait.views
         dakait.files
         dakait.config
+        dakait.mdns
         [clojure.core.async :only(>! go)]
         [dakait.util :only (join-path)]
         [dakait.downloader :only (run start-download downloads-in-progress downloads-pending)]
@@ -130,6 +131,10 @@
   (load-tags (str (config :config-data-dir) "/tags.json"))
   (load-associations)
   (run)
+  (let [port (System/getenv "PORT")
+        port (when (nil? port) 3000)]
+    (println "Starting mDNS server on port:" port)
+    (publish-service port))
   (catch Exception e
     (println "Program initialization failed: " (.getMessage e))
     (System/exit 1)))
