@@ -14,5 +14,11 @@
        (remove empty?)
        last))
 
+(defn supported-portable?
+  "Checks if the user agent string is one of the portable devices we support iPad, iPhone"
+  [ua]
+  (or (re-find #"iPad" ua)
+      (re-find #"iPhone" ua)))
+
 
 

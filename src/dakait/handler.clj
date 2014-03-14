@@ -5,7 +5,7 @@
         dakait.config
         dakait.mdns
         [clojure.core.async :only(>! go)]
-        [dakait.util :only (join-path)]
+        [dakait.util :only (join-path supported-portable?)]
         [dakait.downloader :only (run start-download downloads-in-progress downloads-pending)]
         [dakait.assocs :only (load-associations add-association get-association)]
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
@@ -109,7 +109,10 @@
             :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
 
 (defroutes app-routes
-  (GET "/" [] (index-page))
+  (GET "/" {:keys [headers] :as request}
+       ;; (if (supported-portable? (get headers "user-agent"))
+         (portable-page))
+        ;; (index-page)))
   (GET "/tags" [] (tags-page))
   (GET "/a/files" {params :params }
        (handle-files (:path params)))

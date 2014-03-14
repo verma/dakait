@@ -20,3 +20,6 @@
 (defn tags-page []
   (render-resource "templates/tags.mustache" {:title "Tags"
                                               :server-name (config :server-name)}))
+
+(defn portable-page []
+  (render-resource "templates/mobile.mustache" {:server-name (config :server-name)}))
