@@ -82,13 +82,13 @@
 (defn format-size [n]
   (let [[size postfix] (cond
                         (< n 1000) [n "B"]
-                        (< n 1000000) [(/ n 1000) "KB"]
-                        (< n 1000000000) [(/ n 1000000.0) "MB"]
-                        (< n 1000000000000) [(/ n 1000000000.0) "GB"]
-                        (< n 1000000000000000) [(/ n 1000000000000.0) "TB"]
+                        (< n 1000000) [(/ n 1000) "K"]
+                        (< n 1000000000) [(/ n 1000000.0) "M"]
+                        (< n 1000000000000) [(/ n 1000000000.0) "G"]
+                        (< n 1000000000000000) [(/ n 1000000000000.0) "T"]
                         :else [n "B"])
-         fixedSize (if (< n 1000000) 0 2)]
-    (apply str [(.toFixed size fixedSize) " " postfix])))
+         fixedSize (if (< n 1000000) 0 1)]
+    (apply str [(.toFixed size fixedSize) postfix])))
 
 (defn sort-files [files]
   (let [f (@current-sort-key sort-funcs)]
@@ -171,10 +171,9 @@
                            [:div {:class "col-sm-10 list-item-name"} (linked n)]
                            [:div {:class "col-sm-2 list-item-size"} (file-size n)]
                            ]
-                          [:div.subitem {}
-                           [:div.row {}
-                            [:div {:class "col-sm-6 list-item-tag-button"} (tagged n)]
-                            [:div {:class "col-sm-6 list-item-modified"} (format-date n)]]]]
+                          [:div.row.subitem {}
+                           [:div {:class "col-sm-6 list-item-tag-button"} (tagged n)]
+                           [:div {:class "col-sm-6 list-item-modified"} (format-date n)]]]
                          [:div {:class "col-sm-2 tag-button-container"}
                           [:button {:class "btn btn-default btn-lg tag-item-action"} "Tag"]]]]))]
 
@@ -388,7 +387,7 @@
         (.modal ($ "#downloadsModal")))))
 
 (defn startup []
-  (set-sort :name true)
+  (set-sort :modified false)
   (hide-no-files-indicator)
   (hide-loading-indicator)
   (hide-error)
