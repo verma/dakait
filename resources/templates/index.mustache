@@ -294,7 +294,7 @@
 			<h1 class="name">{{server-name}}</h1>
 			<div class="stats">
 				<a class="tags" href="/tags">Tags</a>
-				<a class="downloads" href="/downloads">Downloads (<span id="download-count">0</span>)</a>
+				<a class="downloads" id="downloadsLink" href="/downloads">Downloads (<span id="download-count">0</span>)</a>
 			</div>
 			<div class="clearfix"></div>
 		</div>
@@ -325,10 +325,7 @@
 					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
 					<h4 class="modal-title">Downloads</h4>
 				</div>
-				<div class="modal-body">
-					<div class="nodownloads">No Active Downloads</div>
-					<div class="current-downloads">
-					</div>
+				<div class="modal-body" id="downloadsBody">
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -360,6 +357,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
+	<script src="http://fb.me/react-0.9.0.js"></script>
     <script src="/js/index.js"></script>
   </body>
 </html>

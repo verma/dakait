@@ -3,7 +3,8 @@
         [clojure.string :only [join split]]
         [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
-  (:require [crate.core :as crate])
+  (:require [crate.core :as crate]
+            [reagent.core :as reagent])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
 (def current-path (atom []))
@@ -16,6 +17,8 @@
 (def current-file-set (atom {}))              ;; current set of files
 
 (def tag-action-handler (atom (fn[])))        ;; What to call when a tag link is attached to
+
+(def downloads (reagent/atom {:active [] :pending []}))
 
 ;; Sort map, each function takes one argument which indicates whether we intend
 ;; to do an ascending or a descending sort
@@ -322,66 +325,61 @@
           (.preventDefault e)
           (push-sort-order n)))))
 
-(defn update-downloads-tracker
-  "Update the modal for download tracking"
-  [data]
-  (log data)
-  (let [dc ($ "#download-count")
-        cd ($ ".current-downloads")
-        nd ($ ".nodownloads")
-        active (.-active data)
-        pending (.-pending data)
-        num-items (count active)
-        filename #(->> (clojure.string/split % #"/")
-                       (remove empty?)
-                       last)
-        downloads-as-seq (fn [d] 
-                           (map (fn [e]
-                                 (let [ds (aget e "download-status")
-                                       filen (filename (.-from e))
-                                       from (.-from e)
-                                       to (.-to e)]
-                                   (crate/html
-                                     [:div.download-item {}
-                                      [:div.title {} filen]
-                                      (if (nil? ds)
-                                        [:div.status {} "Waiting..."]
-                                        [:div.status {}
-                                         [:div.row {}
-                                          [:div.col-sm-2 {} (aget ds "percent-complete")]
-                                          [:div.col-sm-2 {} (.-downloaded ds)]
-                                          [:div.col-sm-2 {} (.-rate ds)]
-                                          [:div.col-sm-2 {} (.-eta ds)]]])
-                                      [:div.desc {} (str from " -> " to)]]))) d))]
-    (html dc (str num-items))
-    (if (zero? num-items)
-      (do
-        (hide cd)
-        (show nd))
-      (do
-        (show cd)
-        (hide nd)
-        (html cd "")
-        (append cd (crate/html [:div.section-title {} "Active"]))
-        (doseq [e (downloads-as-seq active)]
-          (append cd e))
-        (append cd (crate/html [:div.section-title {} "Pending"]))
-        (doseq [e (downloads-as-seq pending)]
-          (append cd e))))))
+(defn update-downloads-state
+  "Gets the current status of downloads"
+  [dls]
+  (js/setTimeout
+    (fn []
+      (let [r (.get js/jQuery "/a/downloads")
+            f (fn [d] (js->clj d :keywordize-keys true))]
+        (.success r #(reset! dls (f %))))) 1000))
 
-(defn start-download-tracker
-  "Tracks the current status of downloads on the server"
-  []
-  (let [query-status (fn []
-                       (let [r (.get js/jQuery "/a/downloads")]
-                         (.success r update-downloads-tracker)))]
-    (js/setInterval query-status 1000)))
+(defn download-item[dl]
+  (let [ds (:download-status dl)
+        from (:from dl)
+        to (:to dl)
+        filen (->> (clojure.string/split from #"/")
+                   (remove empty?)
+                   last)]
+    ^{:key from} [:div.download-item nil
+                  [:div.title nil filen]
+                  (if (nil? ds)
+                    [:div.status {} "Waiting..."]
+                    [:div.status {}
+                     [:div.row {}
+                      [:div.col-sm-2 {} (:percent-complete ds)]
+                      [:div.col-sm-2 {} (:downloaded ds)]
+                      [:div.col-sm-2 {} (:rate ds)]
+                      [:div.col-sm-2 {} (:eta ds)]]])
+                  [:div.desc {} (str from " -> " to)]]))
+
+(defn downloads-component []
+  (update-downloads-state downloads)
+  (let [active (:active @downloads)
+        pending (:pending @downloads)
+        total (+ (count active) (count pending))]
+    (if (zero? total)
+      [:div.nodownloads nil "No Active Downloads"]
+      [:div.current-downloads {}
+       [:div.section-title {} "Active"]
+       (map download-item active)
+       [:div.section-title {} "Pending"]
+       (map download-item pending)])))
+
+(defn active-downloads-indicator-component []
+  (let [active-count (count (:active @downloads))]
+    [:span nil (str "Downloads (" active-count ")")]))
+
+(defn start-downloads-tracker []
+  (reagent/render-component [downloads-component]
+                            (.getElementById js/document "downloadsBody"))
+  (reagent/render-component [active-downloads-indicator-component]
+                            (.getElementById js/document "downloadsLink")))
 
 (defn attach-download-viewer
   "Attach a handler to view current downloads"
   []
-  (hide ($ "#current-downloads"))
-  (on ($ ".downloads") :click
+  (on ($ "body") :click "#downloadsLink"
       (fn [e]
         (.preventDefault e)
         (.modal ($ "#downloadsModal")))))
@@ -392,7 +390,7 @@
   (hide-loading-indicator)
   (hide-error)
   (push-path ".")
-  (start-download-tracker)
+  (start-downloads-tracker)
   (attach-download-viewer)
   (attach-click-handler)
   (attach-tagref-handler)

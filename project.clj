@@ -12,6 +12,7 @@
                  [org.clojure/tools.logging "0.2.6"]
                  [javax.jmdns/jmdns "3.4.1"]
                  [me.raynes/conch "0.5.0"]
+                 [reagent "0.4.2"]
                  [crate "0.2.5"]
                  [jayq "2.5.0"]]
   :plugins [[lein-ring "0.8.10"]
