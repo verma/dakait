@@ -65,3 +65,16 @@ The base path to `cd` into on the remote machine, your session starts in this di
 
 ### concurrency (optional)
 Number of simultaneous downloads.  Defaults to `4`.
+
+Contributors
+---
+
+ - Uday Verma (https://github.com/verma)
+ - Marcin Urbański (https://github.com/murbanski)
+
+License
+---
+
+(C) Copyright 2014 Uday Verma
+
+This software is licensed under Eclipse Public License 1.0.
