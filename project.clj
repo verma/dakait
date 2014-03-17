@@ -1,5 +1,7 @@
 (defproject dakait "0.1.0"
   :description "A tool to download files from your FTP/SFTP servers in an organized way."
+  :license {:name "Eclipse Public License"
+            :url "http://www.eclipse.org/legal/epl-v10.html"}
   :url "https://github.com/verma/dakait"
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
