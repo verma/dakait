@@ -346,6 +346,8 @@
                   (if (nil? ds)
                     [:div.status {} "Waiting..."]
                     [:div.status {}
+                     [:div.thin-progress null
+                      [:div.thin-progress-bar {:style {:width (:percent-complete ds)}}]]
                      [:div.row {}
                       [:div.col-sm-2 {} (:percent-complete ds)]
                       [:div.col-sm-2 {} (:downloaded ds)]
