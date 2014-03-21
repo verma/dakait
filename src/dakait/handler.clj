@@ -1,9 +1,10 @@
 (ns dakait.handler
-  (:use compojure.core
-        dakait.views
+  (:use dakait.views
         dakait.files
         dakait.config
         dakait.mdns
+        compojure.core
+        [compojure.handler :only (site)]
         [clojure.core.async :only(>! go)]
         [dakait.util :only (join-path)]
         [dakait.downloader :only (run start-download downloads-in-progress downloads-pending)]
@@ -11,9 +12,9 @@
         [dakait.tags :only (load-tags get-all-tags add-tag remove-tag find-tag)]
         [clojure.tools.logging :only (info error)]
         [hiccup.middleware :only (wrap-base-url)])
-  (:require [compojure.handler :as handler]
-            [clojure.data.json :as json]
-            [compojure.route :as route]))
+  (:require [ring.middleware.reload :as reload]
+            [compojure.route :as route]
+            [clojure.data.json :as json]))
 
 (defn as-json[m]
   { :status 200
@@ -126,19 +127,23 @@
   (route/not-found "Not Found"))
 
 
-(try
-  (load-and-validate)
-  (load-tags (str (config :config-data-dir) "/tags.json"))
-  (load-associations)
-  (run)
-  (let [port (System/getenv "PORT")
-        port (when (nil? port) 3000)]
-    (println "Starting mDNS server on port:" port)
-    (publish-service port))
-  (catch Exception e
-    (println "Program initialization failed: " (.getMessage e))
-    (System/exit 1)))
-
 (def app
-  (-> (handler/site app-routes)
-      (wrap-base-url)))
+  (-> (site app-routes)
+      wrap-base-url
+      reload/wrap-reload))
+
+(defn do-init []
+  "Initialize program"
+  (try
+    (load-and-validate)
+    (load-tags (str (config :config-data-dir) "/tags.json"))
+    (load-associations)
+    (run)
+    (let [port (System/getenv "PORT")
+          port (when (nil? port) 3000)]
+      (println "Starting mDNS server on port:" port)
+      (publish-service port))
+    (catch Exception e
+      (println "Program initialization failed: " (.getMessage e))
+      (System/exit 1))))
+

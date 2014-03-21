@@ -8,6 +8,9 @@
                  [org.clojure/core.match "0.2.1"]
                  [compojure "1.1.6"]
                  [clj-ssh "0.5.7"]
+                 [ring/ring-devel "1.2.2"]
+                 [ring/ring-core "1.2.2"]
+                 [http-kit "2.1.16"]
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/data.json "0.2.4"]
                  [de.ubercode.clostache/clostache "1.3.1"]
@@ -17,12 +20,15 @@
                  [reagent "0.4.2"]
                  [crate "0.2.5"]
                  [jayq "2.5.0"]]
-  :plugins [[lein-ring "0.8.10"]
-            [lein-cljsbuild "1.0.1"]]
-  :ring {:handler dakait.handler/app}
+  :plugins [[lein-cljsbuild "1.0.1"]]
+
+  :main dakait.main
+
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring-mock "0.1.5"]]}}
+                        [ring-mock "0.1.5"]]}
+   :uberjar {:main dakait.main, :aot :all
+             :dependencies [[javax.servlet/servlet-api "2.5"]]}}
   :hooks [leiningen.cljsbuild]
 
   :cljsbuild {
