@@ -3,9 +3,10 @@
         dakait.files
         dakait.config
         dakait.mdns
+        org.httpkit.server
         compojure.core
         [compojure.handler :only (site)]
-        [clojure.core.async :only(>! go)]
+        [clojure.core.async :only(>! go alts! timeout)]
         [dakait.util :only (join-path)]
         [dakait.downloader :only (run start-download downloads-in-progress downloads-pending)]
         [dakait.assocs :only (load-associations add-association get-association)]
@@ -15,6 +16,10 @@
   (:require [ring.middleware.reload :as reload]
             [compojure.route :as route]
             [clojure.data.json :as json]))
+
+;; All the channels that need to be notified about any download status updates
+;;
+(def ws-downloads-channels (atom []))
 
 (defn as-json[m]
   { :status 200
@@ -109,6 +114,29 @@
   (as-json {:active (downloads-in-progress)
             :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
 
+
+(defn ws-downloads-pusher
+  "Pushes downloads status every so often"
+  []
+  (go (while true
+        (alts! [(timeout 1000)])
+        (let [msg (json/write-str {:active (downloads-in-progress)
+                                   :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))})]
+          (doseq [c @ws-downloads-channels]
+            (send! c msg))))))
+
+;; This end-point handles all incoming websocket connections, or long polling connections
+(defn ws-downloads
+  "Handle incoming websocket connections for downloads updates"
+  [request]
+  (with-channel request channel
+    (on-close channel (fn [status]
+                        (println "Websocket channel is going away!")
+                        (swap! ws-downloads-channels
+                               (fn [chs] (remove #(= % channel) chs)))))
+    (println "New downloads notification")
+    (swap! ws-downloads-channels #(cons channel %))))
+
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/tags" [] (tags-page))
@@ -122,6 +150,7 @@
   (POST "/a/apply-tag" {params :params }
        (handle-apply-tag (:tag params) (:target params)))
   (GET "/a/downloads" [] (handle-active-downloads))
+  (GET "/ws/downloads" [] ws-downloads)
   (GET "/a/params" {params :params} (pr-str params))
   (route/resources "/")
   (route/not-found "Not Found"))
@@ -139,6 +168,7 @@
     (load-tags (str (config :config-data-dir) "/tags.json"))
     (load-associations)
     (run)
+    (ws-downloads-pusher)
     (let [port (System/getenv "PORT")
           port (when (nil? port) 3000)]
       (println "Starting mDNS server on port:" port)

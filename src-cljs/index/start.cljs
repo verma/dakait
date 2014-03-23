@@ -325,15 +325,6 @@
           (.preventDefault e)
           (push-sort-order n)))))
 
-(defn update-downloads-state
-  "Gets the current status of downloads"
-  [dls]
-  (js/setTimeout
-    (fn []
-      (let [r (.get js/jQuery "/a/downloads")
-            f (fn [d] (js->clj d :keywordize-keys true))]
-        (.success r #(reset! dls (f %))))) 1000))
-
 (defn download-item[dl]
   (let [ds (:download-status dl)
         from (:from dl)
@@ -356,7 +347,6 @@
                   [:div.desc {} (str from " -> " to)]]))
 
 (defn downloads-component []
-  (update-downloads-state downloads)
   (let [active (:active @downloads)
         pending (:pending @downloads)
         total (+ (count active) (count pending))]
@@ -372,7 +362,21 @@
   (let [active-count (count (:active @downloads))]
     [:span nil (str "Downloads (" active-count ")")]))
 
+(defn start-downloads-ws-tracker
+  "Start websocket tracker"
+  [dnlds]
+  (let [uri (str "ws://" (.-host (.-location js/window)) "/ws/downloads")
+        ws (js/WebSocket. uri)]
+    (doto ws
+      (aset "onmessage"
+            (fn [data]
+              (let [json-obj (.parse js/JSON (.-data data))
+                    edn-obj (js->clj json-obj :keywordize-keys true)]
+                (reset! dnlds edn-obj)))))))
+
+
 (defn start-downloads-tracker []
+  (start-downloads-ws-tracker downloads)
   (reagent/render-component [downloads-component]
                             (.getElementById js/document "downloadsBody"))
   (reagent/render-component [active-downloads-indicator-component]
@@ -385,6 +389,7 @@
       (fn [e]
         (.preventDefault e)
         (.modal ($ "#downloadsModal")))))
+
 
 (defn startup []
   (set-sort :modified false)
