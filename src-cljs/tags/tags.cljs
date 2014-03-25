@@ -4,37 +4,62 @@
         [jayq.util :only [log]])
   (:use-macros [jayq.macros :only [ready let-deferred]]))
 
+(defn get-json
+  "Sends a get request to the server and gets back with data already EDNed"
+  ([path response-cb error-cb]
+   (get-json path {} response-cb error-cb))
+  ([path params response-cb error-cb]
+   (let [r (.get js/jQuery path (clj->js params))]
+     (doto r
+       (.done (fn [data]
+                (response-cb (js->clj data :keywordize-keys true))))
+       (.fail (fn [e]
+                (error-cb (.-responseJSON e))))))))
+
+(defn http-post
+  "Post an HTTP request"
+  [path params scb ecb]
+  (let [r (.post js/jQuery path (clj->js params))]
+    (doto r
+      (.success scb)
+      (.fail ecb))))
+
+(defn http-delete
+  "Post an HTTP delete request"
+  [url scb ecb]
+  (let [r (.ajax js/jQuery
+                 (js-obj "url" url
+                         "type" "DELETE"))]
+    (doto r
+      (.success scb)
+      (.fail ecb))))
+
+
 (defn get-tags [tags-cb error-cb]
   (log "Getting tags")
-  (let [r (.get js/jQuery "/a/tags")]
-    (.done r tags-cb)
-    (.fail r 
-           (fn [e] 
-             (error-cb (.-responseJSON e))))))
+  (get-json "/a/tags"
+            tags-cb
+            (fn [e] 
+              (error-cb (.-responseJSON e)))))
 
 (defn add-tag-remote
   "Add a tag by posting request to remote end"
   [name target scb ecb]
-  (let [r (.post js/jQuery "/a/tags" (js-obj "name" name
-                                             "target" target))]
-    (.success r scb)
-    (.fail r ecb)))
+  (http-post "/a/tags" {:name name :target target}
+             scb
+             ecb))
 
 (defn remove-tag-remote
   "Remote a tag by posting a request"
   [name scb ecb]
-  (let [r (.ajax js/jQuery
-                 (js-obj "url" (str "/a/tags/" name)
-                         "type" "DELETE"))]
-    (.success r scb)
-    (.fail r ecb)))
+  (http-delete (str "/a/tags/" name) scb ecb))
 
 (defn show-tags [tags]
   (let [content (map 
-                  #(str "<tr style='background-color:" (.-color %) "'>"
-                        "<td>" (.-name %) "</td>"
-                        "<td class='target'>" (.-target %) "</td>"
-                        "<td class='delete'><button type='button' class='btn btn-danger' data-tag='" (.-name %) "'>"
+                  #(str "<tr style='background-color:" (:color %) "'>"
+                        "<td>" (:name %) "</td>"
+                        "<td class='target'>" (:target %) "</td>"
+                        "<td class='delete'><button type='button' class='btn btn-danger' data-tag='" (:name %) "'>"
                         "<span class='glyphicon glyphicon-remove'></span> "
                         "Delete</button></td>"
                         "</tr>")

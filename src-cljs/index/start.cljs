@@ -20,67 +20,78 @@
 
 (def downloads (reagent/atom {:active [] :pending []}))
 
+(defn get-json
+  "Sends a get request to the server and gets back with data already EDNed"
+  ([path response-cb error-cb]
+   (get-json path {} response-cb error-cb))
+  ([path params response-cb error-cb]
+   (let [r (.get js/jQuery path (clj->js params))]
+     (doto r
+       (.done (fn [data]
+                (response-cb (js->clj data :keywordize-keys true))))
+       (.fail (fn [e]
+                (error-cb (js->clj (.-responseJSON e) :keywordize-keys true))))))))
+
+(defn http-post
+  "Post an HTTP request"
+  [path params scb ecb]
+  (let [r (.post js/jQuery path (clj->js params))]
+    (doto r
+      (.success scb)
+      (.fail ecb))))
+
 ;; Sort map, each function takes one argument which indicates whether we intend
 ;; to do an ascending or a descending sort
 ;;
 (def sort-funcs 
   {:name (fn [items asc]
            (sort-by
-             #(str (.-type %) (.-name %))
+             #(str (:type %) (:name %))
              (if (true? asc) compare (comp - compare))
              items)) 
 
    :size (fn [items asc]
            (sort-by
              (if (true? asc)
-               #(.-size %)
-               #(- (.-size %)))
+               #(:size %)
+               #(- (:size %)))
              items))
 
    :modified (fn [items asc]
                (sort-by
                  (if (true? asc)
-                   #(.-modified %)
-                   #(- (.-modified %)))
+                   #(:modified %)
+                   #(- (:modified %)))
                  items))
    })
 
 (defn get-files [path files-cb error-cb]
   (log path)
-  (let [r (.get js/jQuery "/a/files" (js-obj "path" path))]
-    (.done r files-cb)
-    (.fail r 
-           (fn [e] 
-             (error-cb (.-responseJSON e))))))
+  (get-json "/a/files" {:path path} files-cb error-cb))
 
 (defn tag-attach [path tag done]
   (log "Attaching " tag " to path: " path)
-  (let [r (.post js/jQuery "/a/apply-tag" (js-obj "tag" tag
-                                                  "target" path))]
-    (.success r
-           #(if (= (.-status %) 1)
-              (done true) (done false)))
-    (.fail r
-           #(done false))))
+  (http-post "/a/apply-tag" {:tag tag :target path}
+             #(done true)
+             #(done false)))
 
 (defn update-tags-modal
   "Updates the tags modal to show our tags whenever its popped up"
   [tags]
-  (let [tags-html (map #(str "<a href='#' class='tag-item' style='background-color:" (.-color %) "'>"
-                             (.-name %) "</a>") tags)
+  (let [tags-html (map #(str "<a href='#' class='tag-item' style='background-color:" (:color %) "'>"
+                             (:name %) "</a>") tags)
         tag-str (apply str tags-html)]
     (html ($ ".all-tags") tag-str)))
 
 
 (defn update-tags [done-cb]
   (log "querying tags")
-  (let [r (.get js/jQuery "/a/tags")]
-    (.done r
-           (fn [data]
-             (reset! tag-store data)
-             (update-tags-modal data)
-             (done-cb)))
-    (.fail r done-cb)))
+  (get-json "/a/tags"
+            (fn [data]
+              (reset! tag-store data)
+              (update-tags-modal data)
+              (done-cb))
+            done-cb))
 
 (defn format-size [n]
   (let [[size postfix] (cond
@@ -101,7 +112,7 @@
   (let [to (.setTimeout js/window
              (fn [] 
                (reset! hide-timeout nil)
-               (.log js/console "Timeout called, showing loader")
+               (log "Timeout called, showing loader")
                (show ($ :#loader))) 100)]
     (reset! hide-timeout to)))
 
@@ -130,11 +141,10 @@
   (html ($ ".listing") ""))
 
 (defn format-date [n]
-  (let [dt (* (.-modified n) 1000)
+  (let [dt (* (:modified n) 1000)
         now (.getTime (js/Date.))
         diffInSecs (quot (- now dt) 1000)
         diffInHours (quot diffInSecs 3600)]
-    (log (.-name n) diffInSecs " " diffInHours)
     (cond
       (< diffInHours 1) "Less than an hour ago"
       (< diffInHours 2) "An hour ago"
@@ -149,25 +159,25 @@
       (clear-listing)
       (show-no-files-indicator))
     (let 
-      [file-size (fn [n] (if (= (.-type n) "file") (format-size (.-size n)) ""))
-       tags-color-map (reduce #(assoc %1 (.-name %2) (.-color %2)) {} @tag-store)
+      [file-size (fn [n] (if (= (:type n) "file") (format-size (:size n)) ""))
+       tags-color-map (reduce #(assoc %1 (:name %2) (:color %2)) {} @tag-store)
        linked (fn [n]
-                (if (= (.-type n) "dir")
-                  [:a.target-link {:href "#"} (.-name n)]
-                  (.-name n)))
+                (if (= (:type n) "dir")
+                  [:a.target-link {:href "#"} (:name n)]
+                  (:name n)))
        tagged (fn [n]
-                (if (nil? (.-tag n))
+                (if (nil? (:tag n))
                   [:span.list-item-tag]
                   (do
-                    (let [tag-name (.-tag n)
+                    (let [tag-name (:tag n)
                           color (get tags-color-map tag-name)]
                       [:span.list-item-tag {:style (str "color:" color ";")}
                        tag-name]))))
-       target (fn [n] (-> (.-name n)
+       target (fn [n] (-> (:name n)
                           (clojure.string/replace "'" "\\'")
                           (clojure.string/replace "\"" "\\\"")))
        to-row (fn [n] (crate/html 
-                       [:div {:class (str "list-item " (.-type n)) :target (.-name n)}
+                       [:div {:class (str "list-item " (:type n)) :target (:name n)}
                         [:div.row {}
                          [:div.col-sm-10 {}
                           [:div.row {}
@@ -249,7 +259,7 @@
                     (refresh-view files))
                   (fn [error]
                     (hide-loading-indicator)
-                    (show-error (.-message error)))))))
+                    (show-error (:message error)))))))
 
 
 (defn push-path [elem]
@@ -337,7 +347,7 @@
                   (if (nil? ds)
                     [:div.status {} "Waiting..."]
                     [:div.status {}
-                     [:div.thin-progress null
+                     [:div.thin-progress nil
                       [:div.thin-progress-bar {:style {:width (:percent-complete ds)}}]]
                      [:div.row {}
                       [:div.col-sm-2 {} (:percent-complete ds)]
