@@ -53,14 +53,14 @@
    :size (fn [items asc]
            (sort-by
              (if (true? asc)
-               #(:size %)
+               :size
                #(- (:size %)))
              items))
 
    :modified (fn [items asc]
                (sort-by
                  (if (true? asc)
-                   #(:modified %)
+                   :modified
                    #(- (:modified %)))
                  items))
    })
