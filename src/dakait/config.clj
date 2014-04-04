@@ -8,6 +8,7 @@
 (def defaults { :server-name "Server"
                 :sftp-port 22
                 :concurrency 4
+                :local-base-path "."
                 :username (System/getProperty "user.name")
                 :base-path "." })
 
@@ -18,7 +19,6 @@
 (defn- make-sure-required-exist []
   "Makes sure that required properties exist"
   (let [required '(:config-data-dir
-                    :local-base-path
                     :sftp-host :private-key)]
     (doseq [k required]
       (when (nil? (config k))

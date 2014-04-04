@@ -11,7 +11,7 @@
                  [ring/ring-devel "1.2.2"]
                  [ring/ring-core "1.2.2"]
                  [http-kit "2.1.18"]
-                 [org.clojure/clojurescript "0.0-2197"]
+                 [org.clojure/clojurescript "0.0-2202"]
                  [org.clojure/data.json "0.2.4"]
                  [de.ubercode.clostache/clostache "1.3.1"]
                  [org.clojure/tools.logging "0.2.6"]
@@ -20,7 +20,7 @@
                  [reagent "0.4.2"]
                  [crate "0.2.5"]
                  [jayq "2.5.0"]]
-  :plugins [[lein-cljsbuild "1.0.2"]
+  :plugins [[lein-cljsbuild "1.0.3"]
             [lein-ancient "0.5.5"]]
 
   :main dakait.main

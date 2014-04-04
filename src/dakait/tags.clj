@@ -3,9 +3,11 @@
 ;; disk files
 
 (ns dakait.tags
+  (:use dakait.util)
   (:require
     [clojure.java.io :as io]
-    [clojure.data.json :as json]))
+    [clojure.data.json :as json]
+    [clojure.walk :refer [keywordize-keys]]))
 
 (def source-file (atom nil))
 (def all-tags (atom {}))
@@ -23,7 +25,8 @@
   (when (.exists (io/as-file file))
     (reset! all-tags (->> file
                           slurp
-                          json/read-str))))
+                          json/read-str
+                          (map-vals keywordize-keys)))))
 
 (defn get-all-tags
   "Return all tags that we know of"
@@ -33,7 +36,7 @@
 (defn add-tag
   "Add the given tag to the list of tags"
   [name target color]
-  (reset! all-tags (assoc @all-tags name {"target" target "color" color}))
+  (reset! all-tags (assoc @all-tags name {:target target :color color}))
   (flush-to-disk))
 
 (defn find-tag

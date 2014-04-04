@@ -76,11 +76,11 @@
   (do-with-cond 
     (or (nil? tag) (nil? target)) 400 "Tag and taget file needs to be specified"
     (let [tag-obj (find-tag tag)
-          dest (get tag-obj "target")]
+          dest (:target tag-obj)]
       (do-with-cond
         (or (nil? tag-obj) (nil? dest)) 400 "The specified tag is invalid"
         (let [target-path (join-path (config :base-path) target)
-              dest-path (join-path (config :local-base-path) (get tag-obj "target"))]
+              dest-path (join-path (config :local-base-path) (:target tag-obj))]
           ;; start the download
           ;;
           (start-download target-path dest-path)
