@@ -21,10 +21,13 @@
 ;;
 (def ws-downloads-channels (atom []))
 
-(defn as-json[m]
-  { :status 200
+(defn as-json
+  ([]
+   (as-json nil))
+  ([m]
+   { :status 200
     :headers { "Content-Type" "application/json; charset=utf-8" }
-    :body (json/write-str m) })
+    :body (when-not (nil? m) (json/write-str m)) }))
 
 (defn as-json-error
   ([code error-message]
@@ -87,7 +90,7 @@
           ;; setup appropriate association
           ;;
           (add-association tag target-path)
-          (as-json {:status 1}))))))
+          (as-json))))))
 
 (defn handle-get-all-tags []
   (let [s (seq (get-all-tags))]
@@ -100,13 +103,13 @@
   "Handle creation of new tags"
   [name target]
   (add-tag name target (random-html-color))
-  (as-json {:status 1}))
+  (as-json))
 
 (defn handle-remove-tag
   "Handle deletion of tags"
   [name]
   (remove-tag name)
-  (as-json {:success 1}))
+  (as-json))
 
 (defn handle-active-downloads
   "Handle active downloads"
