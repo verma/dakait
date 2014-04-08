@@ -1,4 +1,4 @@
-(defproject dakait "0.1.0"
+(defproject dakait "0.1.1"
   :description "A tool to download files from your FTP/SFTP servers in an organized way."
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
