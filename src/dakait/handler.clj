@@ -23,11 +23,11 @@
 
 (defn as-json
   ([]
-   (as-json nil))
+   (as-json {}))
   ([m]
    { :status 200
     :headers { "Content-Type" "application/json; charset=utf-8" }
-    :body (when-not (nil? m) (json/write-str m)) }))
+    :body (json/write-str m) }))
 
 (defn as-json-error
   ([code error-message]
