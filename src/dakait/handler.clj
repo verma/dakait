@@ -172,10 +172,6 @@
     (load-associations)
     (run)
     (ws-downloads-pusher)
-    (let [port (System/getenv "PORT")
-          port (when (nil? port) 3000)]
-      (println "Starting mDNS server on port:" port)
-      (publish-service port))
     (catch Exception e
       (println "Program initialization failed: " (.getMessage e))
       (System/exit 1))))
