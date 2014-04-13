@@ -297,33 +297,7 @@
 
   <body>
 
-    <div class="container">
-		<div>
-			<h1 class="name">{{server-name}}</h1>
-			<div class="stats">
-				<a class="tags" href="/tags">Tags</a>
-				<a class="downloads" id="downloadsLink" href="/downloads">Downloads (<span id="download-count">0</span>)</a>
-			</div>
-			<div class="clearfix"></div>
-		</div>
-
-		<h3 class="current-path"></h3>
-
-		<div class="btn-group btn-group-justified" id="sorter">
-			<a class="btn btn-default" role="button" id="action-sort-name">Name <span id="sort-name"><span></a>
-			<a class="btn btn-default" role="button" id="action-sort-size">Size <span id="sort-size"></span></a>
-			<a class="btn btn-default" role="button" id="action-sort-modified">Date <span id="sort-modified"></span></a>
-		</div>
-		
-		<div class="listing">
-		</div>
-		<div class="no-files" style="display: none">No files</div>
-		<div id="loader" class="dim">
-			<div class="loader"></div>
-		</div>
-		<div id="error" class="dim">
-			<div class="message"></div>
-		</div>
+    <div class="container" id="app">
     </div><!-- /.container -->
 
 	<div id="downloadsModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
