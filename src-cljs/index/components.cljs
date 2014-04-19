@@ -1,6 +1,7 @@
 (ns dakait.components
   (:use [dakait.util :only [format-file-size format-date]]
         [clojure.string :only [join split]]
+        [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
   (:require [cljs.core.async :as async :refer [>!]]
             [om.core :as om :include-macros true]
@@ -26,49 +27,194 @@
 
 (defn listing
   "Manages and shows the files listing"
-  [file-list owner]
+  [listing owner {:keys [path-push-chan modal-chan] :as opts}]
   (reify
     om/IRender
     (render [this]
       (apply dom/div #js {:className "listing"}
              (map (fn [l]
-                    (let [item-class (str "list-item " (:type l))
+                    (let [push-handler (fn [name]
+                                         (fn []
+                                           (go (>! path-push-chan name))))
+                          tag-handler (fn [name]
+                                        (fn []
+                                          (log "Requesting tag for " name)
+                                          (go (>! modal-chan name))))
+                          item-class (str "list-item " (:type l))
                           item-modified (format-date (:modified l))
                           item-size (if (= (:type l) "dir") "" (format-file-size (:size l)))]
-                      (dom/div #js {:className item-class}
+                      (dom/div #js {:className item-class
+                                    :key (:name l)}
                         (dom/div #js {:className "row"}
                           (dom/div #js {:className "col-sm-10"}
                             (dom/div #js {:className "row"}
                               (dom/div #js {:className "col-sm-10 list-item-name"}
                                 (if (= (:type l) "dir")
-                                  (dom/a #js {:className "target-list"} (:name l))
+                                  (dom/a #js {:className "target-link" :onClick (push-handler (:name l))} (:name l))
                                   (dom/span nil (:name l))))
                               (dom/div #js {:className "col-sm-2 list-item-size"} item-size))
                             (dom/div #js {:className "row subitem"}
-                              (dom/div #js {:className "col-sm-6 list-item-tag-button"} "")
+                              (dom/div #js {:className "col-sm-6 list-item-tag-button"} (:tag l))
                               (dom/div #js {:className "col-sm-6 list-item-modified"} item-modified)))
                           (dom/div #js {:className "col-sm-2 tag-button-container"}
-                            (dom/button #js {:className "btn btn-default btn-lg tag-item-action"} "Tag"))))))
-                  file-list)))))
+                            (dom/button #js {:className "btn btn-default btn-lg tag-item-action"
+                                             :type "button"
+                                             :onClick (tag-handler (:name l)) } "Tag"))))))
+                  listing)))))
 
+(defn download-activity-monitor
+  "A little widget that shows download activity"
+  [downloads owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [dls (count (:active downloads))
+            pen (count (:pending downloads))]
+      (dom/div #js {:className "download-monitor pull-right"}
+        (when-not (zero? (+ dls pen))
+          (dom/div nil "Active Downloads")))))))
 
 (defn sort-order
   "Manages sort order and indicates changes over a channel"
-  [order owner {:keys [sort-order-chan] :as opts}]
-  (let [[key asc] order
-        gen-handler (fn [k]
-                      (fn []
-                        (log "clicked")
-                        (go (>! sort-order-chan [k (if (= k key) (not asc) asc)]))))
-        grp-button (fn [k title]
-                     (dom/a #js {:className "btn btn-default" :role "button" :onClick (gen-handler k)}
-                            title
-                            " "
-                            (when (= k key)
-                              (dom/span #js {:className (str "glyphicon glyphicon-chevron-" (if asc "up" "down"))} ""))))]
-    (dom/div #js {:className "btn-group btn-group-justified"}
-             (grp-button :name "Name")
-             (grp-button :size "Size")
-             (grp-button :modified "Modified"))))
+  [[key asc] owner {:keys [sort-order-chan] :as opts}]
+  (reify
+    om/IRender
+    (render [_]
+      (let [gen-handler (fn [k]
+                          (fn []
+                            (log "clicked")
+                            (go (>! sort-order-chan [k (if (= k key) (not asc) asc)]))))
+            grp-button (fn [k title]
+                         (dom/a #js {:className "btn btn-default" :role "button" :onClick (gen-handler k)}
+                                title
+                                " "
+                                (when (= k key)
+                                  (dom/span #js {:className (str "glyphicon glyphicon-chevron-" (if asc "up" "down"))} ""))))]
+        (log key asc)
+        (dom/div #js {:className "btn-group btn-group-justified"}
+                 (grp-button :name "Name")
+                 (grp-button :size "Size")
+                 (grp-button :modified "Modified"))))))
 
-                    
+(defn- add-tag-form
+  "A horizontal add tag form"
+  [_ owner {:keys [add-cb] :as opts}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:ready false})
+    om/IDidMount
+    (did-mount [_]
+      (.focus (om/get-node owner "name")))
+    om/IRenderState
+    (render-state [_ state]
+      (let [values (fn []
+                     [(.-value (om/get-node owner "name"))
+                      (.-value (om/get-node owner "target"))])
+            text-changed (fn []
+                           (om/set-state! owner :ready
+                                          (every? #(> (count %) 0) (values))))
+            trigger-add (fn []
+                          (let [[name target] (values)]
+                            (set! (.-value (om/get-node owner "name")) "")
+                            (set! (.-value (om/get-node owner "target")) "")
+                            (.focus (om/get-node owner "name"))
+                            (add-cb name target)))
+            key-up (fn [e]
+                     (when (and (= (.-keyCode e) 13)
+                                (om/get-state owner :ready))
+                       (trigger-add)))]
+        (dom/div #js {:className "panel panel-default"
+                      :style #js {:marginTop "10px"}}
+          (dom/div #js {:className "panel-body"}
+            (dom/input #js {:type "text"
+                            :className "form-control"
+                            :placeholder "Name"
+                            :ref "name"
+                            :onChange text-changed
+                            :onKeyUp key-up
+                            :style #js {:marginBottom "5px"}})
+            (dom/input #js {:type "text"
+                            :className "form-control"
+                            :placeholder "Target Path"
+                            :onChange text-changed
+                            :ref "target"
+                            :onKeyUp key-up
+                            :style #js {:marginBottom "5px"}})
+            (dom/div #js {:className "row"}
+              (dom/div #js {:className "col-md-12"}
+                (dom/button #js {:className "btn btn-success btn-block"
+                                 :disabled (not (:ready state))
+                                 :onClick trigger-add
+                                 :style #js {:marginTop "5px"}} "Add")))))))))
+
+(defn tags-modal
+  "The tags modal component, allows users to pick a tag to associate with
+  a file, also allows them to create a new tag if need be, needs a few channels to make things
+  work, a channel to show popup, a channel that recieves the response, and a channel that is notified
+  about any new tags being added"
+  [tags owner {:keys [modal-chan apply-chan add-chan remove-chan] :as opts}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:target nil
+       :adding false})
+
+    om/IDidMount
+    (did-mount [this]
+      (go (loop []
+            (log "in loop")
+            (let [file (<! modal-chan)]
+              (log "Setting file " file)
+              (om/set-state! owner {:target file})
+              (.modal ($ (om/get-node owner)) "show"))
+            (recur))))
+    om/IRenderState
+    (render-state [_ state]
+      (let [close-dialog #(.modal ($ (om/get-node owner)) "hide")
+            make-handler (fn [name] (fn []
+                                      (log "Tag chosen: " name)
+                                      (go (>! apply-chan {:target (:target state)
+                                                          :tag name}))
+                                      (close-dialog)))
+            remove-handler (fn [name] (fn []
+                                        (go (>! remove-chan name))))]
+        (dom/div #js {:className "modal fade" :role "dialog"}
+          (dom/div #js {:className "modal-dialog modal-sm"}
+            (dom/div #js {:className "modal-content"}
+              (dom/div #js {:className "modal-header"}
+                (dom/button #js {:type "button" :className "close" :onClick close-dialog} "x")
+                (dom/h4 #js {:className "modal-title"} "Choose a Tag"))
+              (dom/div #js {:className "modal-body"}
+                (when (zero? (count tags))
+                  (dom/div #js {:className "no-tags"} "There don't seem to be any tags defined, add one!"))
+                (apply dom/table #js {:className "all-tags"
+                                      :style #js {:width "100%"}}
+                  (map #(dom/tr nil
+                          (dom/td nil
+                            (dom/a #js {:className "tag-item"
+                                        :onClick (if (:editing state) (fn[]) (make-handler (:name %)))
+                                        :style #js {:backgroundColor (:color %)}}
+                                 (:name %)))
+                          (when (:editing state)
+                            (dom/td #js {:style #js {:width "50px"}}
+                              (dom/button #js {:className "btn btn-sm btn-danger col-md-1"
+                                               :onClick (remove-handler (:name %))
+                                               :style #js {:width "100%" :height "50px"}}
+                                (dom/span #js {:className "glyphicon glyphicon-remove"})))))
+                         tags))
+                  (when (:editing state)
+                    (om/build add-tag-form
+                              tags ;; we don't really need to pass anything in here, triggers bug
+                              {:opts {:add-cb (fn [name path]
+                                                (go (>! add-chan [name path])))}})))
+              (dom/div #js {:className "modal-footer"}
+                (dom/button #js {:className (str "btn" " " (if (:editing state) "btn-danger" "btn-success"))
+                                 :onClick (fn [] (om/update-state! owner :editing not))}
+                            (dom/span #js {:className "glyphicon glyphicon-edit"})
+                            " "
+                            (if (:editing state) "Done" "Edit"))
+                (dom/button #js {:className "btn btn-defalt btn-info"
+                                 :type "button" 
+                                 :onClick close-dialog } "Close")))))))))
+

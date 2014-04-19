@@ -92,6 +92,7 @@
 		}
 		a.target-link:hover {
 			text-decoration: none;
+			cursor: pointer;
 		}
 
 		.no-files {
@@ -213,6 +214,7 @@
 			text-align: center;
 			padding: 10px;
 			color: black;
+			cursor: pointer;
 		}
 
 		.all-tags a:hover {
@@ -283,6 +285,16 @@
 			background-color: #007883;
 		}
 
+		.download-monitor {
+			margin-top: 20px;
+		}
+
+		.no-tags {
+			font-style: italic;
+			color: #999;
+			text-align: center;
+		}
+
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -315,24 +327,6 @@
 			</div>
 		</div>
 	</div>
-
-	<div id="tagsModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-sm">
-			<div class="modal-content">
-				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-					<h4 class="modal-title">Choose a Tag</h4>
-				</div>
-				<div class="modal-body">
-					<div class="all-tags"></div>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				</div>
-			</div>
-		</div>
-	</div>
-
 
     <!-- Bootstrap core JavaScript
     ================================================== -->

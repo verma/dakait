@@ -36,6 +36,7 @@
              {:source-paths ["src-cljs/index"] 
               :compiler {:output-to "resources/public/js/index.js"
                          :optimizations :whitespace
+                         :source-map true
                          :pretty-print true}}
              
              {:source-paths ["src-cljs/tags"] 

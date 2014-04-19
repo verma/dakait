@@ -102,8 +102,11 @@
 (defn handle-create-tag
   "Handle creation of new tags"
   [name target]
-  (add-tag name target (random-html-color))
-  (as-json))
+  (let [random-color (random-html-color)]
+    (add-tag name target random-color)
+    (as-json {:name name
+              :target target
+              :color random-color})))
 
 (defn handle-remove-tag
   "Handle deletion of tags"

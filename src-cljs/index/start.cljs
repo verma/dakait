@@ -1,5 +1,7 @@
 (ns dakait.index
-  (:use [dakait.components :only [current-path listing sort-order]]
+  (:use [dakait.components :only [current-path listing sort-order download-activity-monitor tags-modal]]
+        [dakait.net :only [get-json http-delete http-post]]
+        [dakait.downloads :only [start-listening-for-downloads]]
         [clojure.string :only [join split]]
         [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [jayq.util :only [log]])
@@ -9,35 +11,12 @@
   (:require-macros [jayq.macros :refer [ready]]
                    [cljs.core.async.macros :refer [go]]))
 
-(def hide-timeout (atom nil))
-(def tag-store (atom nil))
-
-(def current-sort-key (atom :name))           ;; default sort key is name
-(def current-order-is-ascending? (atom true)) ;; default order is ascending
-
-(def current-file-set (atom {}))              ;; current set of files
-
-(def tag-action-handler (atom (fn[])))        ;; What to call when a tag link is attached to
-
-(defn get-json
-  "Sends a get request to the server and gets back with data already EDNed"
-  ([path response-cb error-cb]
-   (get-json path {} response-cb error-cb))
-  ([path params response-cb error-cb]
-   (let [r (.get js/jQuery path (clj->js params))]
-     (doto r
-       (.done (fn [data]
-                (response-cb (js->clj data :keywordize-keys true))))
-       (.fail (fn [e]
-                (error-cb (js->clj (.-responseJSON e) :keywordize-keys true))))))))
-
-(defn http-post
-  "Post an HTTP request"
-  [path params scb ecb]
-  (let [r (.post js/jQuery path (clj->js params))]
-    (doto r
-      (.success scb)
-      (.fail ecb))))
+(def app-state (atom {:name "Server"
+                      :downloads {:active []
+                                  :pending []}
+                      :current-path "."
+                      :listing []
+                      :tags [] }))
 
 ;; Sort map, each function takes one argument which indicates whether we intend
 ;; to do an ascending or a descending sort
@@ -81,62 +60,175 @@
              #(go (>! listing-chan %))
              #(log %)))
 
+(defn request-tags
+  "Gets the tags available on the server and notified through the given channel"
+  [tags-chan]
+  (get-json "/a/tags"
+            (fn [data]
+              (go (>! tags-chan (js->clj data :keywordize-keys true))))
+            (fn []
+              (log "Failed to load tags"))))
+
+(defn add-tag
+  "Add a tag by posting request to remote end"
+  [name target scb ecb]
+  (http-post "/a/tags" {:name name :target target}
+             scb
+             ecb))
+
+(defn remove-tag
+  "Remote a tag by posting a request"
+  [name scb ecb]
+  (http-delete (str "/a/tags/" name) scb ecb))
+
+(defn merge-listing
+  "Merge all the information about downloads and tags from the two separate sources
+  into one listing"
+  [listing tags downloads]
+  ;; yes, eventually :)
+  listing)
+
 (defn full-page
   "Full page om component"
   [app owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:name "Server"
-       :downloads {:active []
-                   :pending []}
-       :current-path "."
-       :listing []
+      {:is-loading false
        :sort-order [:modified false]
        :path-chan (chan)
+       :path-push-chan (chan)
        :listing-chan (chan)
-       :sort-order-chan (chan)})
+       :sort-order-chan (chan)
+       :tags-chan (chan)
+       :downloads-chan (chan)
+       :apply-chan (chan)
+       :add-chan (chan)
+       :remove-chan (chan)
+       :modal-chan (chan)})
     om/IWillMount
     (will-mount [_]
       (let [path-chan (om/get-state owner :path-chan)
             listing-chan (om/get-state owner :listing-chan)
             sort-order-chan (om/get-state owner :sort-order-chan)
-            path (om/get-state owner :path)]
+            push-path-chan (om/get-state owner :path-push-chan)
+            downloads-chan (om/get-state owner :downloads-chan)
+            tags-chan (om/get-state owner :tags-chan)
+            apply-chan (om/get-state owner :apply-chan)
+            add-chan (om/get-state owner :add-chan)
+            remove-chan (om/get-state owner :remove-chan)
+            current-path (om/get-state owner :current-path)
+            request-files (fn [path]
+                            (get-file-listing path listing-chan)
+                            (om/set-state! owner :is-loading true))]
         ;; Start the loop to listen to user clicks on the quick shortcuts
         (go (loop []
               (let [path (<! path-chan)]
-                (log "The user wants to visit: " path)
+                (om/update! app :current-path path)
+                (request-files path)
+                (recur))))
+        ;; Start loop to listen to any requests to push paths
+        (go (loop []
+              (let [push-path (<! push-path-chan)]
+                (om/transact! app :current-path (fn [p] (join "/" [p push-path])))
+                (request-files push-path)
                 (recur))))
         ;; Start the loop to list to responses to listings
         (go (loop []
-              (let [listing (<! listing-chan)
-                    [key asc] (om/get-state owner :sort-order)]
-                (log "Got listing" listing)
-                (om/set-state! owner :listing listing)
+              (let [listing (<! listing-chan)]
+                (om/update! app :listing listing)
+                (om/set-state! owner :is-loading false)
                 (recur))))
+        ;; Start loop for listening to sort requests
         (go (loop []
               (let [new-order (<! sort-order-chan)]
-                (log "Changing sort order to", new-order)
                 (om/set-state! owner :sort-order new-order)
                 (recur))))
+        ;; Start loop for downloads
+        (go (loop [info nil]
+              (when-not (nil? info)
+                (om/update! app :downloads info))
+              (recur (<! downloads-chan))))
+        ;; Start loop for tags
+        (go (loop []
+              (let [new-tags (<! tags-chan)]
+                (log "Got tags" new-tags)
+                (om/update! app :tags new-tags))
+              (recur)))
+        ;; Start loop for tag applications
+        (go (loop []
+              (let [tag (<! apply-chan)]
+                (log "Applying tag " (:tag tag) " to " (:target tag)))
+              (recur)))
+        ;; Add chan
+        (go (loop []
+              (let [[name path] (<! add-chan)]
+                (log "Adding tag " name " with target " path)
+                (add-tag name path
+                         (fn [d]
+                           (om/transact! app :tags
+                                         (fn [t]
+                                           (vec (cons (js->clj d :keywordize-keys true) t)))))
+                         #(log "Failed to add tag!")))
+              (recur)))
+        ;; go loop for removing tags
+        (go (loop []
+              (let [tag (<! remove-chan)]
+                (log "Removing tag " tag)
+                (remove-tag tag
+                            (fn []
+                              (om/transact! app :tags (fn [ts]
+                                                        (vec (remove #(= (:name %) tag) ts)))))
+                            #(log "Failed to delete tag: " tag)))
+              (recur)))
         ;; queue initial file listing
-        (get-file-listing path listing-chan)))
+        (request-tags tags-chan)
+        (request-files current-path)
+        ;; start download manager
+        (start-listening-for-downloads downloads-chan)))
     om/IRenderState
     (render-state [this state]
       (let [[sort-key sort-asc] (om/get-state owner :sort-order)
             sort-list (fn [listing] ((sort-key sort-funcs) listing sort-asc))]
         (dom/div #js {:className "page"}
           (dom/div #js {:className "clearfix"}
-            (dom/h1 #js {:className "name"} (:name state)))
-          (om/build current-path (:current-path state)
+            (dom/h1 #js {:className "name"} (:name state))
+            (om/build download-activity-monitor (:downloads state)))
+          ;; Setup current path view
+          ;;
+          (om/build current-path
+                    (:current-path app)
                     {:opts {:path-chan (:path-chan state)}})
-          (om/build sort-order (:sort-order state)
+          ;; Set the sort order view
+          ;;
+          (om/build sort-order
+                    (:sort-order state)
                     {:opts {:sort-order-chan (:sort-order-chan state)}})
-          (om/build listing (sort-list (:listing state))))))))
+          ;; listing view
+          ;;
+          (om/build listing 
+                    (-> (:listing app)
+                        (merge-listing (:tags app) (:downloads app))
+                        (sort-list))
+                    {:opts {:path-push-chan (:path-push-chan state)
+                            :modal-chan (:modal-chan state)}})
+          ;; setup our tags modal
+          ;;
+          (om/build tags-modal
+                    (:tags app)
+                    {:opts {:modal-chan (:modal-chan state)
+                            :apply-chan (:apply-chan state)
+                            :remove-chan (:remove-chan state)
+                            :add-chan (:add-chan state)}})
+          ;; when a load is inprogress show the loading indicator
+          ;;
+          (when (:is-loading state)
+            (dom/div #js {:className "dim"}
+                     (dom/div #js {:className "loader"} ""))))))))
 
 (defn startup
   "Page initialization"
   []
-  (om/root full-page {} {:target (. js/document (getElementById "app"))}))
+  (om/root full-page app-state {:target (. js/document (getElementById "app"))}))
 
 (ready (startup))
