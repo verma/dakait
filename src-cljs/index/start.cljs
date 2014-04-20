@@ -11,7 +11,9 @@
   (:require-macros [jayq.macros :refer [ready]]
                    [cljs.core.async.macros :refer [go]]))
 
-(def app-state (atom {:name "Server"
+(def server-vars (js->clj (.-serverVars js/window) :keywordize-keys true))
+
+(def app-state (atom {:name (:name server-vars)
                       :downloads {:active []
                                   :pending []}
                       :current-path "."

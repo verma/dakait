@@ -16,7 +16,3 @@
 (defn index-page []
   (render-resource "templates/index.mustache" {:title "Hello"
                                                :server-name (config :server-name) }))
-
-(defn tags-page []
-  (render-resource "templates/tags.mustache" {:title "Tags"
-                                              :server-name (config :server-name)}))
