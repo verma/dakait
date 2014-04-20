@@ -55,9 +55,9 @@
 
 (defn get-file-listing
   "Gets the file listing and posts it to the given channel"
-  [path listing-chan]
+  [path scb]
   (get-files path
-             #(go (>! listing-chan %))
+             scb
              #(log %)))
 
 (defn request-tags
@@ -84,9 +84,35 @@
 (defn merge-listing
   "Merge all the information about downloads and tags from the two separate sources
   into one listing"
-  [listing tags downloads]
-  ;; yes, eventually :)
-  listing)
+  [listing tags downloads current-path]
+  (let [tags (into {} (for [t tags] [(:name t) t]))
+
+        ;; strip out the string from the last . to the end of the path, and return true if it matches current path
+        current-path? (fn [p] 
+                        (let [last-period (.lastIndexOf p "./")
+                              last-slash (.lastIndexOf p "/")
+                              path (.substring p last-period last-slash)]
+                          (= path current-path)))
+
+        ;; Clean out the path and pick the last component of it
+        filename (fn [p]
+                   (last (split p #"/")))
+        dls (into {} (for [dl (:active downloads) :when (current-path? (:from dl))] [(filename (:from dl)) dl]))
+        attach-tag (fn [l]
+                     (if-let [tag-name (:tag l)]
+                       (assoc l :tag (get tags tag-name))
+                       l))
+        attach-dl (fn [l]
+                    (if-let [dl (get dls (:name l))]
+                      (do
+                        (assoc l :download (:download-status dl)))
+                      l))]
+    (->> listing
+         ;; Associate tag information
+         (map #(->> %
+                    attach-tag 
+                    attach-dl)))))
+
 
 (defn full-page
   "Full page om component"
@@ -97,7 +123,6 @@
       {:is-loading false
        :sort-order [:modified false]
        :path-chan (chan)
-       :path-push-chan (chan)
        :listing-chan (chan)
        :sort-order-chan (chan)
        :tags-chan (chan)
@@ -109,35 +134,21 @@
     om/IWillMount
     (will-mount [_]
       (let [path-chan (om/get-state owner :path-chan)
-            listing-chan (om/get-state owner :listing-chan)
             sort-order-chan (om/get-state owner :sort-order-chan)
-            push-path-chan (om/get-state owner :path-push-chan)
             downloads-chan (om/get-state owner :downloads-chan)
             tags-chan (om/get-state owner :tags-chan)
             apply-chan (om/get-state owner :apply-chan)
             add-chan (om/get-state owner :add-chan)
-            remove-chan (om/get-state owner :remove-chan)
-            current-path (om/get-state owner :current-path)
-            request-files (fn [path]
-                            (get-file-listing path listing-chan)
-                            (om/set-state! owner :is-loading true))]
+            remove-chan (om/get-state owner :remove-chan)]
         ;; Start the loop to listen to user clicks on the quick shortcuts
         (go (loop []
               (let [path (<! path-chan)]
-                (om/update! app :current-path path)
-                (request-files path)
-                (recur))))
-        ;; Start loop to listen to any requests to push paths
-        (go (loop []
-              (let [push-path (<! push-path-chan)]
-                (om/transact! app :current-path (fn [p] (join "/" [p push-path])))
-                (request-files push-path)
-                (recur))))
-        ;; Start the loop to list to responses to listings
-        (go (loop []
-              (let [listing (<! listing-chan)]
-                (om/update! app :listing listing)
-                (om/set-state! owner :is-loading false)
+                (om/set-state! owner :is-loading path)
+                (get-file-listing path
+                                  (fn [list]
+                                    (om/set-state! owner :is-loading false)
+                                    (om/update! app :current-path path)
+                                    (om/update! app :listing list)))
                 (recur))))
         ;; Start loop for listening to sort requests
         (go (loop []
@@ -157,8 +168,19 @@
               (recur)))
         ;; Start loop for tag applications
         (go (loop []
-              (let [tag (<! apply-chan)]
-                (log "Applying tag " (:tag tag) " to " (:target tag)))
+              (let [[path name] (<! apply-chan)]
+                (log "Applying tag " name " to " path)
+                (tag-attach path name 
+                            (fn [v]
+                              (when v
+                                (let [fname (last (split path #"/"))]
+                                  (om/transact! app :listing
+                                                (fn [lst]
+                                                  (let [idx (-> (keep-indexed #(if (= fname (:name %2)) %1) lst)
+                                                                first)]
+                                                    (log idx)
+                                                    (assoc-in lst [idx :tag] name)))))))))
+
               (recur)))
         ;; Add chan
         (go (loop []
@@ -183,7 +205,7 @@
               (recur)))
         ;; queue initial file listing
         (request-tags tags-chan)
-        (request-files current-path)
+        (go (>! path-chan "."))
         ;; start download manager
         (start-listening-for-downloads downloads-chan)))
     om/IRenderState
@@ -192,8 +214,8 @@
             sort-list (fn [listing] ((sort-key sort-funcs) listing sort-asc))]
         (dom/div #js {:className "page"}
           (dom/div #js {:className "clearfix"}
-            (dom/h1 #js {:className "name"} (:name state))
-            (om/build download-activity-monitor (:downloads state)))
+            (dom/h1 #js {:className "name"} (:name app))
+            (om/build download-activity-monitor (:downloads app)))
           ;; Setup current path view
           ;;
           (om/build current-path
@@ -206,12 +228,12 @@
                     {:opts {:sort-order-chan (:sort-order-chan state)}})
           ;; listing view
           ;;
-          (om/build listing 
-                    (-> (:listing app)
-                        (merge-listing (:tags app) (:downloads app))
-                        (sort-list))
-                    {:opts {:path-push-chan (:path-push-chan state)
-                            :modal-chan (:modal-chan state)}})
+          (om/build listing {:listing (-> (:listing app)
+                                          (merge-listing (:tags app) (:downloads app) (:current-path app))
+                                          (sort-list))
+                             :current-path (:current-path app)}
+                             {:opts {:path-chan (:path-chan state)
+                                     :modal-chan (:modal-chan state)}})
           ;; setup our tags modal
           ;;
           (om/build tags-modal

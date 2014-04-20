@@ -27,7 +27,7 @@
 
 (defn listing
   "Manages and shows the files listing"
-  [listing owner {:keys [path-push-chan modal-chan] :as opts}]
+  [{:keys [listing current-path]} owner {:keys [path-chan modal-chan] :as opts}]
   (reify
     om/IRender
     (render [this]
@@ -35,14 +35,24 @@
              (map (fn [l]
                     (let [push-handler (fn [name]
                                          (fn []
-                                           (go (>! path-push-chan name))))
+                                           (go (>! path-chan (str current-path "/" name)))))
                           tag-handler (fn [name]
                                         (fn []
                                           (log "Requesting tag for " name)
-                                          (go (>! modal-chan name))))
+                                          (go (>! modal-chan (str current-path "/" name)))))
                           item-class (str "list-item " (:type l))
                           item-modified (format-date (:modified l))
-                          item-size (if (= (:type l) "dir") "" (format-file-size (:size l)))]
+                          item-size (if (= (:type l) "dir") "" (format-file-size (:size l)))
+                          tag-item (let [tag (:tag l)
+                                         dl (:download l)
+                                         color (if tag (:color tag) "#999")
+                                         dlinfo (if dl
+                                                  (str (:percent-complete dl) ", " (:rate dl) ", eta: " (:eta dl))
+                                                  "")]
+                                     (dom/div #js {:className "col-sm-6 list-item-tag"
+                                                   :style #js {:color color}}
+                                              (when tag (dom/span #js {:className "tag-info"} (:name tag)))
+                                              (when dl (dom/span #js {:className "dl-info"} dlinfo))))]
                       (dom/div #js {:className item-class
                                     :key (:name l)}
                         (dom/div #js {:className "row"}
@@ -54,12 +64,16 @@
                                   (dom/span nil (:name l))))
                               (dom/div #js {:className "col-sm-2 list-item-size"} item-size))
                             (dom/div #js {:className "row subitem"}
-                              (dom/div #js {:className "col-sm-6 list-item-tag-button"} (:tag l))
+                              tag-item
                               (dom/div #js {:className "col-sm-6 list-item-modified"} item-modified)))
                           (dom/div #js {:className "col-sm-2 tag-button-container"}
                             (dom/button #js {:className "btn btn-default btn-lg tag-item-action"
                                              :type "button"
-                                             :onClick (tag-handler (:name l)) } "Tag"))))))
+                                             :onClick (tag-handler (:name l)) } "Tag")))
+                          (when-let [pc (:percent-complete (:download l))]
+                            (dom/div #js {:className "thin-progress"}
+                              (dom/div #js {:className "thin-progress-bar"
+                                              :style #js {:width pc}}))))))
                   listing)))))
 
 (defn download-activity-monitor
@@ -69,10 +83,25 @@
     om/IRender
     (render [_]
       (let [dls (count (:active downloads))
-            pen (count (:pending downloads))]
+            pen (count (:pending downloads))
+            as-kb (fn [s]
+                    (if-let [m (re-find #"(\d+\.?\d*)KB/s" s)]
+                      (js/parseFloat (second m))
+                      (if-let [m (re-find #"(\d+\.?\d*)MB/s" s)]
+                        (* (js/parseFloat (second m)) 1000)
+                        0)))
+            dl->bw (fn [dl]
+                     (if-let [ds (:download-status dl)] (as-kb (:rate ds)) 0))
+            tb (reduce #(+ %1 (dl->bw %2)) 0 (:active downloads))
+            tb-str (if (< tb 1000)
+                     (str (.toFixed tb 2) "KB/s")
+                     (str (.toFixed (/ tb 1000) 2) "MB/s"))]
+
       (dom/div #js {:className "download-monitor pull-right"}
         (when-not (zero? (+ dls pen))
-          (dom/div nil "Active Downloads")))))))
+          (dom/div #js {:className "activity-monitor"}
+            (dom/div nil (str "Active: " dls " Pending: " pen))
+            (dom/div nil tb-str))))))))
 
 (defn sort-order
   "Manages sort order and indicates changes over a channel"
@@ -174,8 +203,7 @@
       (let [close-dialog #(.modal ($ (om/get-node owner)) "hide")
             make-handler (fn [name] (fn []
                                       (log "Tag chosen: " name)
-                                      (go (>! apply-chan {:target (:target state)
-                                                          :tag name}))
+                                      (go (>! apply-chan [(:target state) name]))
                                       (close-dialog)))
             remove-handler (fn [name] (fn []
                                         (go (>! remove-chan name))))]

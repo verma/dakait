@@ -278,6 +278,7 @@
 		.thin-progress {
 			height: 2px;
 			width: 100%;
+			margin-top: 5px;
 		}
 
 		.thin-progress-bar {
@@ -295,6 +296,23 @@
 			text-align: center;
 		}
 
+		.tag-info {
+			margin-right: 10px;
+		}
+		.dl-info {
+			font-weight: normal;
+			font-style: normal;
+		}
+
+		.activity-monitor {
+			text-align: right;
+			text-transform: uppercase;
+			font-weight: 700;
+			font-style: italic;
+			color: #999;
+			padding-top: 5px;
+		}
+
 	</style>
 
     <!-- Just for debugging purposes. Don't actually copy this line! -->
@@ -309,24 +327,9 @@
 
   <body>
 
-    <div class="container" id="app">
+	<div class="container">
+	  <div id="app"></div>
     </div><!-- /.container -->
-
-	<div id="downloadsModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-sm">
-			<div class="modal-content">
-				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-					<h4 class="modal-title">Downloads</h4>
-				</div>
-				<div class="modal-body" id="downloadsBody">
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				</div>
-			</div>
-		</div>
-	</div>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
