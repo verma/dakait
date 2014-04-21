@@ -5,7 +5,7 @@
 
 (defn -main [& args]
   "Application entry point"
-  (do-init)
+  (apply do-init args)
   (println "Initialization complete...")
   (run-server app {:port 3000}))
 

@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
                  [org.clojure/core.match "0.2.1"]
+                 [org.clojure/tools.cli "0.3.1"]
                  [compojure "1.1.6"]
                  [clj-ssh "0.5.7"]
                  [ring/ring-devel "1.2.2"]
@@ -33,8 +34,24 @@
 
   :cljsbuild {
     :builds [
-             {:source-paths ["src-cljs/index"] 
+             {:id "rel"
+              :source-paths ["src-cljs/dakait"] 
               :compiler {:output-to "resources/public/js/index.js"
-                         :optimizations :whitespace
+                         :optimizations :advanced
+                         :preamble ["libs/react/react.min.js"
+                                    "libs/jquery/jquery-1.10.2.min.js"
+                                    "libs/bootstrap/bootstrap.js"]
+                         :externs ["libs/react/react.externs.js"
+                                   "libs/jquery/jquery-1.10.2.min.js"
+                                   "libs/bootstrap/bootstrap.js"]
+                         :closure-warnings {:externs-validation :off
+                                            :non-standard-jsdoc :off}
+                         :pretty-print false}}
+             {:id "dev"
+              :source-paths ["src-cljs/dakait"] 
+              :compiler {:output-to "resources/public/js/index.js"
+                         :output-dir "resources/public/js/out"
+                         :source-map true
+                         :optimizations :none
                          :pretty-print true}}
              ]})

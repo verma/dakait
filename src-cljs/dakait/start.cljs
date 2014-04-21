@@ -13,7 +13,7 @@
 
 (def server-vars (js->clj (.-serverVars js/window) :keywordize-keys true))
 
-(def app-state (atom {:name (:name server-vars)
+(def app-state (atom {:name ""
                       :downloads {:active []
                                   :pending []}
                       :current-path "."
@@ -44,6 +44,16 @@
                    #(- (:modified %)))
                  items))
    })
+
+(defn get-config
+  "Gets configuration from the server, what it include depends on what
+  we need"
+  [scb]
+  (get-json "/a/config"
+            #(scb (js->clj % :keywordize-keys true))
+            (fn []
+              (log "Failed to get configuration from server")
+              (scb {}))))
 
 (defn get-files [path files-cb error-cb]
   (log path)
@@ -205,10 +215,21 @@
                                                         (vec (remove #(= (:name %) tag) ts)))))
                             #(log "Failed to delete tag: " tag)))
               (recur)))
+        ;; Get configuration from server
+        ;;
+        (get-config (fn [config]
+                      (om/update! app :name (:server-name config))))
+
         ;; queue initial file listing
+        ;;
         (request-tags tags-chan)
+
+        ;; Get initial path
+        ;;
         (go (>! path-chan "."))
+
         ;; start download manager
+        ;;
         (start-listening-for-downloads downloads-chan)))
     om/IRenderState
     (render-state [this state]

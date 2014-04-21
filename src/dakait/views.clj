@@ -16,3 +16,6 @@
 (defn index-page []
   (render-resource "templates/index.mustache" {:title "Hello"
                                                :server-name (config :server-name) }))
+(defn debug-index-page []
+  (render-resource "templates/index.debug.mustache" {:title "Hello"
+                                                     :server-name (config :server-name)}))

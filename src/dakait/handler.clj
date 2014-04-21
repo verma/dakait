@@ -14,12 +14,14 @@
         [clojure.tools.logging :only (info error)]
         [hiccup.middleware :only (wrap-base-url)])
   (:require [ring.middleware.reload :as reload]
+            [clojure.tools.cli :refer [parse-opts]]
             [compojure.route :as route]
             [clojure.data.json :as json]))
 
 ;; All the channels that need to be notified about any download status updates
 ;;
 (def ws-downloads-channels (atom []))
+(def start-options (atom nil))
 
 (defn as-json
   ([]
@@ -59,6 +61,11 @@
   []
   (let [r (java.util.Random.)]
     (str "hsl(" (.nextInt r 360) ",50%,70%)")))
+
+(defn handle-config
+  "Returns the current required set of configuration to client"
+  []
+  (as-json {:server-name (config :server-name)}))
 
 (defn handle-files
   "Fetch files for the given path"
@@ -144,7 +151,11 @@
     (swap! ws-downloads-channels #(cons channel %))))
 
 (defroutes app-routes
-  (GET "/" [] (index-page))
+  (GET "/" [] (if (:debug @start-options)
+                (debug-index-page)
+                (index-page)))
+  (GET "/a/config" []
+       (handle-config))
   (GET "/a/files" {params :params }
        (handle-files (:path params)))
   (GET "/a/tags" [] (handle-get-all-tags))
@@ -166,9 +177,14 @@
       wrap-base-url
       reload/wrap-reload))
 
-(defn do-init []
+(def cli-options
+  [["-d" "--debug"]])
+
+(defn do-init [& args]
   "Initialize program"
   (try
+    (reset! start-options (:options (parse-opts args cli-options)))
+
     (load-and-validate)
     (load-tags (str (config :config-data-dir) "/tags.json"))
     (load-associations)
