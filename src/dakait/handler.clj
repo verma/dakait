@@ -3,6 +3,7 @@
         dakait.files
         dakait.config
         dakait.mdns
+        dakait.staging
         org.httpkit.server
         compojure.core
         [compojure.handler :only (site)]
@@ -93,9 +94,10 @@
               dest-path (join-path (config :local-base-path) (:target tag-obj))]
           ;; start the download
           ;;
-          (start-download target-path dest-path)
+          ;; (start-download target-path dest-path)
           ;; setup appropriate association
           ;;
+          (stage-file target-path dest-path)
           (add-association tag target-path)
           (as-json))))))
 
@@ -188,6 +190,7 @@
     (load-and-validate)
     (load-tags (str (config :config-data-dir) "/tags.json"))
     (load-associations)
+    (init-stager)
     (run)
     (ws-downloads-pusher)
     (catch Exception e

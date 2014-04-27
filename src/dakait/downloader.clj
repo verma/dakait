@@ -117,15 +117,16 @@
                 (let [next-task (peek @download-queue)]
                   (when next-task
                     (reset! download-queue (pop @download-queue))
-                    (let [[src dest] next-task
+                    (let [[src dest f] next-task
                           p (download src dest)]
                       (info "Process is: " (apply str p))
-                      (reset! active-downloads (conj @active-downloads p))))))
+                      (reset! active-downloads (conj @active-downloads (conj (vec p) f)))))))
 
               (doseq [task @active-downloads]
                 (let [t (first task)]
                   (when (realized? t)
-                    (info "Exited code: " @t))))
+                    (info "Exited code: " @t ", Now triggering callback")
+                    ((last task) (= @t 0)))))
 
               ;; Remove any completed futures from our active downloads list
               (reset! active-downloads (remove #(->> % first realized?) @active-downloads))
@@ -150,9 +151,11 @@
 
 (defn start-download
   "Start a download for the given file"
-  [src dest]
-  (info "Queuing download, source: " src ", destination: " dest)
-  (swap! download-queue conj [src dest]))
+  ([src dest]
+   (start-download src dest (fn [s])))
+  ([src dest f]
+   (info "Queuing download, source: " src ", destination: " dest)
+   (swap! download-queue conj [src dest f])))
 
 (defn run
   "Run the downloader loop"

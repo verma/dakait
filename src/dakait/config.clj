@@ -19,6 +19,7 @@
 (defn- make-sure-required-exist []
   "Makes sure that required properties exist"
   (let [required '(:config-data-dir
+                    :staging-dir
                     :sftp-host :private-key)]
     (doseq [k required]
       (when (nil? (config k))

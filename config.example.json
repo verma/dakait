@@ -5,6 +5,7 @@
   "username": "guest",
   "private-key": "/path/to/private/key",
   "base-path": "./some/dir",
-  "local-base-path": "/some/local/dir"
+  "local-base-path": "/some/local/dir",
+  "staging-dir": "/path/to/temporarily/download/files",
   "concurrency": 4
 }
