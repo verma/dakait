@@ -32,7 +32,7 @@
   "Read current state from disk"
   []
   (when (.exists (io/file @staged-info-file))
-    (->> staged-info-file
+    (->> @staged-info-file
          slurp
          json/read-str
          (map-vals #(let [m (keywordize-keys %)]        ;; All keys need to be keywordized, and the :download-state's value needs to be keywordized

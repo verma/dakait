@@ -1,5 +1,6 @@
 (ns dakait.index
-  (:use [dakait.components :only [current-path listing sort-order download-activity-monitor tags-modal]]
+  (:use [dakait.components :only [current-path listing sort-order
+                                  download-activity-monitor tags-modal content-pusher-modal]]
         [dakait.net :only [get-json http-delete http-post]]
         [dakait.downloads :only [start-listening-for-downloads]]
         [clojure.string :only [join split]]
@@ -142,6 +143,7 @@
        :apply-chan (chan)
        :add-chan (chan)
        :remove-chan (chan)
+       :pusher-modal-chan (chan)
        :modal-chan (chan)})
     om/IWillMount
     (will-mount [_]
@@ -237,8 +239,11 @@
             sort-list (fn [listing] ((sort-key sort-funcs) listing sort-asc))]
         (dom/div #js {:className "page"}
           (dom/div #js {:className "clearfix"}
-            (dom/h1 #js {:className "name"} (:name app))
+            (dom/h3 #js {:className "name"} (:name app))
             (om/build download-activity-monitor (:downloads app)))
+          (dom/div #js {:className "actions-menu"}
+            (dom/a #js {:href "#"
+                        :onClick #(go (>! (:pusher-modal-chan state) ""))} "Upload"))
           ;; Setup current path view
           ;;
           (om/build current-path
@@ -265,8 +270,13 @@
                             :apply-chan (:apply-chan state)
                             :remove-chan (:remove-chan state)
                             :add-chan (:add-chan state)}})
-          ;; when a load is inprogress show the loading indicator
+
+          ;; The Modal to accept content URLs
           ;;
+          (om/build content-pusher-modal
+                    (:tags app) ;; we need to pass in some cursor to avoid an issue
+                    {:opts {:pusher-modal-chan (:pusher-modal-chan state)}})
+
           (when (:is-loading state)
             (dom/div #js {:className "dim"}
                      (dom/div #js {:className "loader"} ""))))))))

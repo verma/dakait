@@ -4,6 +4,7 @@
         dakait.config
         dakait.mdns
         dakait.staging
+        dakait.pusher
         org.httpkit.server
         compojure.core
         [compojure.handler :only (site)]
@@ -130,6 +131,17 @@
             :pending (map (fn [d] {:from (first d) :to (second d)}) (downloads-pending))}))
 
 
+(defn handle-push
+  "Handle a URL push"
+  [url]
+  (info "Going to try and push: " url)
+  (try
+    (if (do-push url)
+      (as-json {:message "Pushed successfully"})
+      (as-json-error "Failed to complete action"))
+    (catch Exception e
+      (as-json-error (.getMessage e)))))
+
 (defn ws-downloads-pusher
   "Pushes downloads status every so often"
   []
@@ -170,6 +182,8 @@
   (GET "/a/downloads" [] (handle-active-downloads))
   (GET "/ws/downloads" [] ws-downloads)
   (GET "/a/params" {params :params} (pr-str params))
+  (POST "/a/push" {params :params}
+        (handle-push (:url params)))
   (route/resources "/")
   (route/not-found "Not Found"))
 

@@ -2,6 +2,7 @@
   (:use [dakait.util :only [format-file-size format-date]]
         [clojure.string :only [join split]]
         [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
+        [dakait.net :only [http-post]]
         [jayq.util :only [log]])
   (:require [cljs.core.async :as async :refer [>!]]
             [om.core :as om :include-macros true]
@@ -246,3 +247,64 @@
                                  :type "button" 
                                  :onClick close-dialog } "Close")))))))))
 
+(defn content-pusher-modal
+  "This modal accepts a URL to a resource, downloads the resource and pushes it back to the server to
+   a specified location configured on the server side"
+  [_ owner {:keys [pusher-modal-chan] :as opts}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:can-accept false
+       :adding false})
+
+    om/IDidMount
+    (did-mount [this]
+      (.modal ($ (om/get-node owner)) #js {:keyboard false
+                                           :show false
+                                           :backdrop "static"})
+      (go (loop []
+            (<! pusher-modal-chan)
+            (log "Got request to show pusher modal")
+            (.modal ($ (om/get-node owner)) "show")
+            (recur))))
+    om/IRenderState
+    (render-state [_ state]
+      (let [close-dialog #(.modal ($ (om/get-node owner)) "hide")
+            ;; handler to handle stuff when the user types in or pastes in the URL
+            ;;
+            change-handler #(let [v (.-value (om/get-node owner "url"))]
+                              (log v)
+                              (om/set-state! owner :can-accept (> (count v) 0)))
+            ;; Handler to handle an upload request
+            ;;
+            handle-upload (fn []
+                            (let [v (.-value (om/get-node owner "url"))]
+                              (log "Pushing upload " v)
+                              (om/set-state! owner :processing true)
+                              (http-post "/a/push" {:url v}
+                                         #(close-dialog)
+                                         #(do
+                                            (om/set-state! owner :error true)
+                                            (om/set-state! owner :processing false)))))]
+        (dom/div #js {:className "modal fade" :role "dialog"}
+          (dom/div #js {:className "modal-dialog modal-sm"}
+            (dom/div #js {:className "modal-content"}
+              (dom/div #js {:className "modal-body"}
+                (dom/input #js {:className "form-control input-lg"
+                                :style #js {:margin "20px 0px"}
+                                :ref "url"
+                                :onChange change-handler
+                                :disabled (:processing state)
+                                :placeholder "Resource URL"})
+                (when (:processing state)
+                  (dom/div #js {:className "loader"}))
+                (when (:error state)
+                  (dom/div #js {:className "alert alert-danger"}
+                           "There seems to be a problem pushing your upload, check logs?"))
+                (dom/button #js {:className "btn btn-sm btn-success btn-block"
+                                 :disabled (or (not (:can-accept state)) (:processing state))
+                                 :onClick handle-upload
+                                 :style #js {:marginBottom "5px"}} "OK")
+                (dom/button #js {:className "btn btn-sm btn-info btn-block"
+                                 :disabled (:processing state)
+                                 :onClick close-dialog} "Close")))))))))

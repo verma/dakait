@@ -10,6 +10,7 @@
                 :concurrency 4
                 :local-base-path "."
                 :username (System/getProperty "user.name")
+                :push-path "."
                 :base-path "." })
 
 (defn config [k]

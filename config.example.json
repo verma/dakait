@@ -7,5 +7,6 @@
   "base-path": "./some/dir",
   "local-base-path": "/some/local/dir",
   "staging-dir": "/path/to/temporarily/download/files",
+  "push-path": "/path/to/push/urls/to",
   "concurrency": 4
 }
