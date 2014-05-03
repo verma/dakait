@@ -259,14 +259,21 @@
 
     om/IDidMount
     (did-mount [this]
-      (.modal ($ (om/get-node owner)) #js {:keyboard false
-                                           :show false
-                                           :backdrop "static"})
-      (go (loop []
-            (<! pusher-modal-chan)
-            (log "Got request to show pusher modal")
-            (.modal ($ (om/get-node owner)) "show")
-            (recur))))
+      (let [$modal ($ (om/get-node owner))
+            url (om/get-node owner "url")]
+        (.modal $modal #js {:keyboard false
+                            :show false
+                            :backdrop "static"})
+        (.on $modal "shown.bs.modal" (fn []
+                                       (.focus url)))
+        (go (loop []
+              (<! pusher-modal-chan)
+              (log "Got request to show pusher modal")
+              (om/set-state! owner :processing false)
+              (om/set-state! owner :error false)
+              (set! (.-value url) "")
+              (.modal $modal "show")
+              (recur)))))
     om/IRenderState
     (render-state [_ state]
       (let [close-dialog #(.modal ($ (om/get-node owner)) "hide")
