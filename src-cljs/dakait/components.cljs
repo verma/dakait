@@ -61,7 +61,7 @@
                             (dom/div #js {:className "row"}
                               (dom/div #js {:className "col-sm-10 list-item-name"}
                                 (if (= (:type l) "dir")
-                                  (dom/a #js {:className "target-link" :onClick (push-handler (:name l))} (:name l))
+                                  (dom/a #js {:className "target-link" :href "#" :onClick (push-handler (:name l))} (:name l))
                                   (dom/span nil (:name l))))
                               (dom/div #js {:className "col-sm-2 list-item-size"} item-size))
                             (dom/div #js {:className "row subitem"}
@@ -95,8 +95,8 @@
                      (if-let [ds (:download-status dl)] (as-kb (:rate ds)) 0))
             tb (reduce #(+ %1 (dl->bw %2)) 0 (:active downloads))
             tb-str (if (< tb 1000)
-                     (str (.toFixed tb 2) "KB/s")
-                     (str (.toFixed (/ tb 1000) 2) "MB/s"))]
+                     (str (.toFixed tb 1) "KB/s")
+                     (str (.toFixed (/ tb 1000) 1) "MB/s"))]
 
       (dom/div #js {:className "download-monitor pull-right"}
         (when-not (zero? (+ dls pen))
