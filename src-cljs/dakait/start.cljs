@@ -1,6 +1,7 @@
 (ns dakait.index
   (:use [dakait.components :only [current-path listing sort-order
                                   download-activity-monitor tags-modal content-pusher-modal]]
+        [dakait.util :only [duration-since]]
         [dakait.net :only [get-json http-delete http-post]]
         [dakait.downloads :only [start-listening-for-downloads]]
         [clojure.string :only [join split]]
@@ -126,6 +127,31 @@
                     attach-tag 
                     attach-dl)))))
 
+(def path-refresh-timeout (atom nil))
+(def path-refresh-was-canceled (atom false))
+
+(defn path-refresh
+  "Continously query the given path at regular intervals, should be cancellable"
+  [path f]
+  (let [to (js/setTimeout (fn []
+                            (log "Refreshing path...")
+                            (get-file-listing path
+                                              (fn [list]
+                                                (when-not @path-refresh-was-canceled
+                                                  (f list)
+                                                  (path-refresh path f)))))
+                          2000)]
+    (reset! path-refresh-was-canceled false)
+    (reset! path-refresh-timeout to)))
+
+(defn cancel-path-refresh
+  "Cancel an active path refresh loop"
+  []
+  (when @path-refresh-timeout
+    (js/clearTimeout @path-refresh-timeout)
+    (reset! path-refresh-timeout nil)
+    (reset! path-refresh-was-canceled true)
+    (log "Path refresh was cancelled!")))
 
 (defn full-page
   "Full page om component"
@@ -158,11 +184,15 @@
         (go (loop []
               (let [path (<! path-chan)]
                 (om/set-state! owner :is-loading path)
+                (cancel-path-refresh)
                 (get-file-listing path
                                   (fn [list]
                                     (om/set-state! owner :is-loading false)
                                     (om/update! app :current-path path)
-                                    (om/update! app :listing list)))
+                                    (om/update! app :listing list)
+                                    (path-refresh path
+                                                  (fn [l]
+                                                    (om/update! app :listing l)))))
                 (recur))))
         ;; Start loop for listening to sort requests
         (go (loop []
@@ -258,7 +288,7 @@
           ;;
           (om/build listing {:listing (-> (:listing app)
                                           (merge-listing (:tags app) (:downloads app) (:current-path app))
-                                          (sort-list))
+                                          sort-list)
                              :current-path (:current-path app)}
                              {:opts {:path-chan (:path-chan state)
                                      :modal-chan (:modal-chan state)}})

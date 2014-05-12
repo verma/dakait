@@ -82,11 +82,13 @@
 
 (defn all-remote-files [path]
   (let [query-path (join-path (config :base-path) path)
+        now (quot (.getTime (java.util.Date.)) 1000)
         entries (list-remote-files query-path)
         not-hidden? (fn [e] (not= (.charAt (.getFilename e) 0) \.))
         file-type (fn [e] (if (.isDir (.getAttrs e)) "dir" "file"))
         file-size (fn [e] (.getSize (.getAttrs e)))
         last-modified (fn [e] (-> e (.getAttrs) (.getMTime)))
+        recent? (fn [e] (< (- now (last-modified e)) 10))
         ]
     (info "query path: " query-path)
     (->> entries 
@@ -94,5 +96,6 @@
          (map (fn [e] { :name (.getFilename e) 
                         :type (file-type e)
                         :modified (last-modified e)
+                        :recent (recent? e)
                         :size (file-size e)})))))
 

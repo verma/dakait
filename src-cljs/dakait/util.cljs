@@ -28,3 +28,9 @@
       (< diffInHours 48) "A day ago"
       (< diffInHours 168) (str (quot diffInHours 24) " days ago")
       :else (.toDateString (js/Date. dt)))))
+
+(defn duration-since
+  "Given a time stamp (time in seconds since epoch), returns how much time in seconds has passed since"
+  [n]
+  (let [now (quot (.getTime (js/Date.)) 1000)]
+    (- now n)))

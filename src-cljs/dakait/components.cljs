@@ -1,5 +1,5 @@
 (ns dakait.components
-  (:use [dakait.util :only [format-file-size format-date]]
+  (:use [dakait.util :only [format-file-size format-date duration-since]]
         [clojure.string :only [join split]]
         [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [dakait.net :only [http-post]]
@@ -70,6 +70,7 @@
                           (dom/div #js {:className "col-sm-2 tag-button-container"}
                             (dom/button #js {:className "btn btn-default btn-lg tag-item-action"
                                              :type "button"
+                                             :disabled (:recent l)
                                              :onClick (tag-handler (:name l)) } "Tag")))
                           (when-let [pc (:percent-complete (:download l))]
                             (dom/div #js {:className "thin-progress"}
