@@ -52,7 +52,7 @@
   (.mkdirs (io/file dest))
   (with-programs [mv]
     (info "Moving " src " -> " dest)
-    (mv src dest)))
+    (mv src dest {:verbose true})))
 
 (defn stage-file
   "Helps stage the file, triggers download of the file to the staged configuration area, once the

@@ -129,18 +129,22 @@
 
 (def path-refresh-timeout (atom nil))
 (def path-refresh-was-canceled (atom false))
+(def path-refresh-active-path (atom nil))
 
 (defn path-refresh
   "Continously query the given path at regular intervals, should be cancellable"
   [path f]
   (let [to (js/setTimeout (fn []
-                            (log "Refreshing path...")
                             (get-file-listing path
                                               (fn [list]
-                                                (when-not @path-refresh-was-canceled
+                                                ;; Make sure this response is for our currently active path
+                                                ;; and not a stale one
+                                                (when (and (not @path-refresh-was-canceled)
+                                                           (= path @path-refresh-active-path))
                                                   (f list)
                                                   (path-refresh path f)))))
                           2000)]
+    (reset! path-refresh-active-path path)
     (reset! path-refresh-was-canceled false)
     (reset! path-refresh-timeout to)))
 
@@ -148,6 +152,7 @@
   "Cancel an active path refresh loop"
   []
   (when @path-refresh-timeout
+    (log "Clearing timeout: " @path-refresh-timeout)
     (js/clearTimeout @path-refresh-timeout)
     (reset! path-refresh-timeout nil)
     (reset! path-refresh-was-canceled true)
