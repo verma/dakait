@@ -8,6 +8,7 @@
 (def defaults { :server-name "Server"
                 :sftp-port 22
                 :concurrency 4
+                :use-ipv6 false
                 :local-base-path "."
                 :username (System/getProperty "user.name")
                 :push-path "."

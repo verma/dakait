@@ -2,6 +2,7 @@
   "config-data-dir": "/change/this/to/some/dir",
   "sftp-host": "sftp.example.com",
   "sftp-port": 22,
+  "use-ipv6": false,
   "username": "guest",
   "private-key": "/path/to/private/key",
   "base-path": "./some/dir",

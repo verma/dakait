@@ -48,6 +48,7 @@
         os-dest (os-proof dest)
         scp-command (list "scp"
                           "-i" (config :private-key) ;; identity file
+                          (if (config :use-ipv6) "-6" "-4") ;; use appropriate flag to force IP version selection
                           "-B" ;; batch run
                           "-r" ;; recursive if directory
                           "-o" "StrictHostKeyChecking=no"
