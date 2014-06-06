@@ -90,7 +90,6 @@
         last-modified (fn [e] (-> e (.getAttrs) (.getMTime)))
         recent? (fn [e] (< (- now (last-modified e)) 10))
         ]
-    (info "query path: " query-path)
     (->> entries 
          (filter not-hidden?)
          (map (fn [e] { :name (.getFilename e) 
