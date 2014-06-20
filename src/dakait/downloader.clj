@@ -5,6 +5,7 @@
 (ns dakait.downloader
   (:use dakait.config
         [dakait.util :only (join-path)]
+        [clojure.core.match :only (match)]
         [clojure.core.async :only (thread)]
         [clojure.tools.logging :only (info warn error)])
   (:require
@@ -121,16 +122,22 @@
                     (let [[src dest f] next-task
                           p (download src dest)]
                       (info "Process is: " (apply str p))
-                      (reset! active-downloads (conj @active-downloads (conj (vec p) f)))))))
+                      (let [new-dl-state (conj (vec p) f false)] ; false indicates that the user has not been notified about this completion yet
+                        (reset! active-downloads (conj @active-downloads new-dl-state)))))))
 
-              (doseq [task @active-downloads]
-                (let [t (first task)]
-                  (when (realized? t)
-                    (info "Exited code: " @t ", Now triggering callback")
-                    ((last task) (= @t 0)))))
+              (swap! active-downloads
+                     (fn [dls]
+                       (map #(match [%]
+                                    [[(t :guard realized?) s d cb false]] (do
+                                                                            (cb (= @t 0))
+                                                                            [t s d cb true])
+                                    :else %) dls)))
 
               ;; Remove any completed futures from our active downloads list
-              (reset! active-downloads (remove #(->> % first realized?) @active-downloads))
+              (swap! active-downloads
+                     (fn [dls]
+                       (remove #(last %) dls)))
+
               (catch Exception e
                 (warn "Exception in downloader thread: " (.getMessage e))
                 (.printStackTrace e))
@@ -140,7 +147,7 @@
 (defn downloads-in-progress
   "Gets all active downloads"
   []
-  (map (fn [[fut src dest]]
+  (map (fn [[fut src dest & rest]]
          {:from src
           :to dest
           :download-status (get @download-states src)}) @active-downloads))

@@ -78,6 +78,8 @@
            (info "There is no download state, start one")
            (start-download target-path (config :staging-dir)
                            (fn [code]
+                             (info "File download completed! performing post download stuff")
+                             (info "Process completion code is" code)
                              (if code ;; this file was successfully downloaded, move the file to destination
                                (let [info (get @staged target-path)]
                                  (move-to-dir (join-path (config :staging-dir) (filename target-path)) (:dest info))
