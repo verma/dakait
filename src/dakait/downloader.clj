@@ -93,12 +93,8 @@
                  (let [p (apply sh/proc (map str args))]
                    (with-open [rdr (io/reader (:out p))]
                      (doseq [line (line-seq rdr)]
-                       (info "stdout: " line)
                        (let [state-map (update-to-map line)]
-                         (info "source key: " src)
-                         (info "download state map: " state-map)
                          (swap! download-states assoc src state-map))))
-                   (info "Process ended")
                    (sh/exit-code p))
                  (catch Exception e
                    (info "Download process failed: " (.getMessage e))
@@ -115,16 +111,20 @@
             ;; check if we have room for another download, if we do check if we have a task waiting
             ;; if so, start it up
             (try
+              ; start any new tasks that need to be started if we have room
+              ;
               (when (< (count @active-downloads) concurrency)
-                (let [next-task (peek @download-queue)]
-                  (when next-task
-                    (reset! download-queue (pop @download-queue))
-                    (let [[src dest f] next-task
-                          p (download src dest)]
-                      (info "Process is: " (apply str p))
-                      (let [new-dl-state (conj (vec p) f false)] ; false indicates that the user has not been notified about this completion yet
-                        (reset! active-downloads (conj @active-downloads new-dl-state)))))))
+                (when-let [next-task (peek @download-queue)]
+                  (swap! download-queue pop)
+                  (let [[src dest f] next-task
+                        p (download src dest)]
+                    (info "Process is: " (apply str p))
+                    ; false indicates that the user has not been notified about this completion yet
+                    (let [new-dl-state (conj (vec p) f false)] 
+                      (swap! active-downloads conj new-dl-state)))))
 
+              ; call callbacks on any completed but not triggered tasks
+              ;
               (swap! active-downloads
                      (fn [dls]
                        (map #(match [%]
@@ -133,10 +133,9 @@
                                                                             [t s d cb true])
                                     :else %) dls)))
 
-              ;; Remove any completed futures from our active downloads list
-              (swap! active-downloads
-                     (fn [dls]
-                       (remove #(last %) dls)))
+              ; Remove any completed futures from our active downloads list
+              ;
+              (swap! active-downloads #(remove last %))
 
               (catch Exception e
                 (warn "Exception in downloader thread: " (.getMessage e))
