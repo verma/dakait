@@ -6,8 +6,10 @@
         [jayq.util :only [log]])
   (:require [cljs.core.async :as async :refer [>!]]
             [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+            [om.dom :as dom :include-macros true]
+            [cljs.core.match])
+  (:require-macros [cljs.core.async.macros :refer [go]]
+                   [cljs.core.match.macros :refer [match]]))
 
 (defn current-path
   "Manages the current path display"
@@ -47,9 +49,10 @@
                           tag-item (let [tag (:tag l)
                                          dl (:download l)
                                          color (if tag (:color tag) "#999")
-                                         dlinfo (if dl
-                                                  (str (:percent-complete dl) ", " (:rate dl) ", eta: " (:eta dl))
-                                                  "")]
+                                         dlinfo (match dl
+                                                  {:available st} (str (:percent-complete st) ", " (:rate st) ", eta: " (:eta st))
+                                                  {:waiting _} "Waiting..."
+                                                  :else "")]
                                      (dom/div #js {:className "col-sm-6 list-item-tag"
                                                    :style #js {:color color}}
                                               (when tag (dom/span #js {:className "tag-info"} (:name tag)))
@@ -72,7 +75,7 @@
                                              :type "button"
                                              :disabled (:recent l)
                                              :onClick (tag-handler (:name l)) } "Tag")))
-                          (when-let [pc (:percent-complete (:download l))]
+                          (when-let [pc (get-in l [:download :available :percent-complete])]
                             (dom/div #js {:className "thin-progress"}
                               (dom/div #js {:className "thin-progress-bar"
                                               :style #js {:width pc}}))))))

@@ -118,9 +118,12 @@
                        l))
         attach-dl (fn [l]
                     (if-let [dl (get dls (:name l))]
-                      (do
-                        (assoc l :download (:download-status dl)))
+                      (let [ds (if (:download-status dl)
+                                 {:available (:download-status dl)}
+                                 {:waiting nil})]
+                        (assoc l :download ds))
                       l))]
+    (.log js/console "got downloads" (pr-str dls))
     (->> listing
          ;; Associate tag information
          (map #(->> %

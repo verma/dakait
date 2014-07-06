@@ -146,10 +146,12 @@
 (defn downloads-in-progress
   "Gets all active downloads"
   []
-  (map (fn [[fut src dest & rest]]
-         {:from src
-          :to dest
-          :download-status (get @download-states src)}) @active-downloads))
+  (let [ad @active-downloads
+        ds @download-states]
+    (map (fn [[fut src dest & rest]]
+           {:from src
+            :to dest
+            :download-status (ds src)}) ad)))
 
 (defn downloads-pending
   "Get all the pending downloads as a seq"
