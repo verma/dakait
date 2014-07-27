@@ -123,7 +123,6 @@
                                  {:waiting nil})]
                         (assoc l :download ds))
                       l))]
-    (.log js/console "got downloads" (pr-str dls))
     (->> listing
          ;; Associate tag information
          (map #(->> %

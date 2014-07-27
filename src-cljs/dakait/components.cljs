@@ -4,7 +4,7 @@
         [jayq.core :only [$ html append css text ajax on bind hide show attr add-class remove-class]]
         [dakait.net :only [http-post]]
         [jayq.util :only [log]])
-  (:require [cljs.core.async :as async :refer [>!]]
+  (:require [cljs.core.async :as async :refer [chan >! put!]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.match])
@@ -81,12 +81,77 @@
                                               :style #js {:width pc}}))))))
                   listing)))))
 
+
+(defn- file-name [p]
+  (-> p
+      (clojure.string/split #"/")
+      last))
+
+(defn overlay-download-summary-item
+  "Shows a single overlay download"
+  [download owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div nil
+        (apply dom/div 
+               #js {:className "row download-item"}
+               (dom/div
+                 #js {:className "col-sm-6 col-xs-12 filename"}
+                 (file-name (:from download)))
+               (if-let [ds (:download-status download)]
+                 [(dom/div #js {:className "col-sm-2 col-xs-4 sub pc"} (:percent-complete ds))
+                  (dom/div #js {:className "col-sm-2 col-xs-4 sub rate"} (:rate ds))
+                  (dom/div #js {:className "col-sm-2 col-xs-4 sub ds"} (:eta ds))]
+                 (dom/div #js {:className "col-sm-6 sub waiting"}
+                          "Waiting...")))
+        (dom/div (clj->js {:className "progress-bar"
+                      :style (clj->js {:width (if (:download-status download)
+                                           (get-in download [:download-status :percent-complete])
+                                           "0%")})}) " ")))))
+
+
+
+(defn overlay-download-summary
+  "A floating overlay widget which shows the current status of all downloads"
+  [downloads owner {:keys [hide-chan] :as opts}]
+  (reify
+    om/IRender
+    (render [_]
+      (let [dls (:active downloads)]
+        (dom/div 
+          #js {:className "floating-overlay"}
+          (if (-> dls count zero?)
+            (dom/div nil "There are no active downloads at this time")
+            (dom/div nil
+              (apply dom/div #js {:className "container-fluid"
+                                  :style #js {:position "relative"}}
+                       (om/build-all overlay-download-summary-item dls))))
+          (dom/div #js {:className "container-fluid controls"}
+                   (dom/div #js {:className "col-sm-4 col-sm-offset-4"}
+                            (dom/button #js {:type "button"
+                                             :className "btn btn-primary btn-sm btn-block"
+                                             :onClick #(put! hide-chan 0)}
+                                        "Close"))))))))
+
 (defn download-activity-monitor
   "A little widget that shows download activity"
   [downloads owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IInitState
+    (init-state [_]
+      {:show-summary false
+       :hide-chan (chan)})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [c (om/get-state owner :hide-chan)]
+        (go (loop [v (<! c)]
+              (om/set-state! owner :show-summary false)
+              (recur (<! c))))))
+
+    om/IRenderState
+    (render-state [_ {:keys [show-summary hide-chan] :as state}]
       (let [dls (count (:active downloads))
             pen (count (:pending downloads))
             as-kb (fn [s]
@@ -103,9 +168,13 @@
                      (str (.toFixed (/ tb 1000) 1) "MB/s"))]
 
       (dom/div #js {:className "download-monitor pull-right"}
+        (when show-summary
+          (om/build overlay-download-summary downloads {:opts {:hide-chan hide-chan}}))
         (when-not (zero? (+ dls pen))
           (dom/div #js {:className "activity-monitor"}
-            (dom/div nil (str "Active: " dls " Pending: " pen))
+            (dom/a #js {:href "#"
+                        :onClick #(om/update-state! owner :show-summary not)}
+                   (str "Active: " dls " Pending: " pen))
             (dom/div nil tb-str))))))))
 
 (defn sort-order
@@ -140,6 +209,7 @@
     om/IDidMount
     (did-mount [_]
       (.focus (om/get-node owner "name")))
+
     om/IRenderState
     (render-state [_ state]
       (let [values (fn []

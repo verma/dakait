@@ -72,6 +72,71 @@ body  {
 	color: #999;
 }
 
+.floating-overlay {
+	position: fixed;
+	top: 20px;
+	left: 15%;
+	right: 15%;
+	z-index: 10000;
+
+	word-wrap: break-word;
+
+	padding: 10px;
+
+	border: 1px solid black;
+	background-color: #333;
+	color: white;
+	box-shadow: 1px 1px 1px #888888;
+	font-size: 20px;
+}
+
+.floating-overlay .download-item {
+	padding: 5px;
+}
+
+.floating-overlay .progress-bar {
+	height: 2px;
+	background-color: #555;
+	opacity: 0.5;
+}
+
+.floating-overlay .filename {
+	font-weight: bold;
+}
+
+.floating-overlay .sub {
+	text-align:right;
+}
+
+.floating-overlay .waiting {
+	font-style: italic;
+}
+
+.floating-overlay .controls {
+	margin-top: 30px;
+}
+
+@media (max-width: 980px) {
+	.floating-overlay {
+		font-size: 15px;
+	}
+}
+
+@media (max-width: 780px) {
+	.floating-overlay .sub {
+		text-align: left;
+	}
+}
+
+@media (max-width: 568px) {
+	.floating-overlay {
+		top: 0px;
+		left: 0px;
+		right: 0px;
+		border: none;
+	}
+}
+
 .current-path a {
 	padding: 0px 5px;
 }
