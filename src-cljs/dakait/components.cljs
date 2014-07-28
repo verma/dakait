@@ -103,8 +103,7 @@
                  [(dom/div #js {:className "col-sm-2 col-xs-4 sub pc"} (:percent-complete ds))
                   (dom/div #js {:className "col-sm-2 col-xs-4 sub rate"} (:rate ds))
                   (dom/div #js {:className "col-sm-2 col-xs-4 sub ds"} (:eta ds))]
-                 (dom/div #js {:className "col-sm-6 sub waiting"}
-                          "Waiting...")))
+                 [(dom/div #js {:className "col-sm-6 sub waiting"} "Waiting...")]))
         (dom/div (clj->js {:className "progress-bar"
                       :style (clj->js {:width (if (:download-status download)
                                            (get-in download [:download-status :percent-complete])
